@@ -131,6 +131,7 @@ export function AppProvider({ children }) {
   const [candidates, setCandidates] = useState([])
   const [toasts,     setToasts]     = useState([])
   const [loading,    setLoading]    = useState(true)
+  const [isLoggedIn, setIsLoggedIn] = useState(false)
   const dbRef = useRef(null)
 
   // ── Boot: open DB, seed if empty, load all data ──────────────────────────
@@ -177,6 +178,37 @@ export function AppProvider({ children }) {
     setToasts(t => [...t, { id, msg, type }])
     setTimeout(() => setToasts(t => t.filter(x => x.id !== id)), 3000)
   }, [])
+
+  // ── Check login persistence ──────────────────────────────────────────────
+  useEffect(() => {
+    if (localStorage.getItem('hiretrackr_loggedIn')) {
+      setIsLoggedIn(true)
+    }
+  }, [])
+
+  // ── Auth ──────────────────────────────────────────────────────────────────
+  const login = (username, password) => {
+    // For backward compatibility, allow admin/admin@123
+    if (username === 'admin' && password === 'admin@123') {
+      setIsLoggedIn(true)
+      localStorage.setItem('hiretrackr_loggedIn', 'true')
+      return true
+    }
+
+    // Check stored users
+    const users = JSON.parse(localStorage.getItem('hiretrackr_users') || '[]')
+    const user = users.find(u => u.username === username && u.password === password)
+    if (user) {
+      setIsLoggedIn(true)
+      localStorage.setItem('hiretrackr_loggedIn', 'true')
+      return true
+    }
+    return false
+  }
+  const logout = () => {
+    setIsLoggedIn(false)
+    localStorage.removeItem('hiretrackr_loggedIn')
+  }
 
   // ── Companies ─────────────────────────────────────────────────────────────
   const addCompany = async (data) => {
@@ -292,7 +324,7 @@ export function AppProvider({ children }) {
       addRecruiter,  updateRecruiter,  deleteRecruiter,
       addJob,        updateJob,        deleteJob,        setJobStatus,
       addCandidate,  updateCandidate,  deleteCandidate,  setCandidateStatus,
-      STATUSES, toast, toasts
+      STATUSES, toast, toasts, isLoggedIn, login, logout
     }}>
       {children}
       <div className="toast-container">

@@ -1,7 +1,8 @@
 import React from 'react'
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
-import { AppProvider } from './context/AppContext'
+import { AppProvider, useApp } from './context/AppContext'
 import Sidebar from './components/Sidebar'
+import Login from './pages/Login'
 import Dashboard from './pages/Dashboard'
 import Jobs from './pages/Jobs'
 import Candidates from './pages/Candidates'
@@ -31,20 +32,32 @@ function Topbar({ title, sub }) {
   )
 }
 
+function AppContent() {
+  const { isLoggedIn } = useApp()
+
+  if (!isLoggedIn) {
+    return <Login />
+  }
+
+  return (
+    <Layout>
+      <Routes>
+        <Route path="/" element={<Dashboard />} />
+        <Route path="/jobs" element={<Jobs />} />
+        <Route path="/candidates" element={<Candidates />} />
+        <Route path="/pipeline" element={<Pipeline />} />
+        <Route path="/recruiters" element={<Recruiters />} />
+        <Route path="/companies" element={<Companies />} />
+      </Routes>
+    </Layout>
+  )
+}
+
 export default function App() {
   return (
     <AppProvider>
       <BrowserRouter>
-        <Layout>
-          <Routes>
-            <Route path="/" element={<Dashboard />} />
-            <Route path="/jobs" element={<Jobs />} />
-            <Route path="/candidates" element={<Candidates />} />
-            <Route path="/pipeline" element={<Pipeline />} />
-            <Route path="/recruiters" element={<Recruiters />} />
-            <Route path="/companies" element={<Companies />} />
-          </Routes>
-        </Layout>
+        <AppContent />
       </BrowserRouter>
     </AppProvider>
   )
