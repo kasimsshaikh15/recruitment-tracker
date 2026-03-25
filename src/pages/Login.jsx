@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useApp } from '../context/AppContext'
-import { sanitizeInput, validatePassword, loginRateLimiter } from '../utils/security'
+import { generateCSRFToken } from '../utils/security'
 
 export default function Login() {
   const { login } = useApp()
@@ -16,8 +16,7 @@ export default function Login() {
   const [success, setSuccess] = useState('')
 
   const handleUsernameChange = (e) => {
-    const sanitized = sanitizeInput(e.target.value)
-    setUsername(sanitized)
+    setUsername(e.target.value.trim())
   }
 
   const handlePasswordChange = (e) => {
@@ -62,12 +61,6 @@ export default function Login() {
         return
       }
 
-      const passwordValidation = validatePassword(password)
-      if (!passwordValidation.isValid) {
-        setError(passwordValidation.errors.join('. '))
-        return
-      }
-
       if (password !== confirmPassword) {
         setError('Passwords do not match')
         return
@@ -100,12 +93,6 @@ export default function Login() {
       setConfirmPassword('')
     } else {
       // Sign in validation
-      if (!loginRateLimiter.canAttempt()) {
-        const remainingTime = Math.ceil(loginRateLimiter.getRemainingTime() / 1000 / 60)
-        setError(`Too many failed attempts. Please try again in ${remainingTime} minutes.`)
-        return
-      }
-
       if (!username) {
         setError('Please enter your username')
         return
@@ -118,10 +105,8 @@ export default function Login() {
 
       const success = login(username, password)
       if (success) {
-        loginRateLimiter.attempts = [] // Reset attempts on successful login
         navigate('/') // Navigate to home page after successful login
       } else {
-        loginRateLimiter.recordAttempt()
         setError('Incorrect password. Please check your password and try again.')
       }
     }
