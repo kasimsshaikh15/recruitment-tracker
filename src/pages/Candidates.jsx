@@ -153,7 +153,7 @@ function ProfileDrawer({ candidate, onClose, jobs, companies, recruiters, setCan
 }
 
 export default function Candidates() {
-  const { candidates, jobs, companies, recruiters, addCandidate, updateCandidate, deleteCandidate, setCandidateStatus } = useApp()
+  const { visibleCandidates: candidates, visibleJobs: jobs, visibleCompanies: companies, visibleRecruiters: recruiters, addCandidate, updateCandidate, deleteCandidate, setCandidateStatus } = useApp()
   const [search, setSearch] = useState('')
   const [filterStatus, setFilterStatus] = useState('All')
   const [filterCompany, setFilterCompany] = useState('All')

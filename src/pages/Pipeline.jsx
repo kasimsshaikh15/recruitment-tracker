@@ -14,7 +14,7 @@ const STAGES = [
 ]
 
 export default function Pipeline() {
-  const { candidates, jobs, companies, setCandidateStatus } = useApp()
+  const { visibleCandidates: candidates, visibleJobs: jobs, visibleCompanies: companies, setCandidateStatus } = useApp()
   const [search, setSearch] = useState('')
   const [filterCompany, setFilterCompany] = useState('All')
   const [filterJob, setFilterJob] = useState('All')

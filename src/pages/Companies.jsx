@@ -133,7 +133,7 @@ function CompanyDetailModal({ company, jobs, candidates, recruiters, onClose }) 
 }
 
 export default function Companies() {
-  const { companies, jobs, candidates, recruiters, addCompany, updateCompany, deleteCompany } = useApp()
+  const { visibleCompanies: companies, visibleJobs: jobs, visibleCandidates: candidates, visibleRecruiters: recruiters, addCompany, updateCompany, deleteCompany } = useApp()
   const [search, setSearch] = useState('')
   const [modal, setModal] = useState(null)
   const [viewModal, setViewModal] = useState(null)

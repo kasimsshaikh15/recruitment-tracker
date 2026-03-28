@@ -9,35 +9,23 @@ import Candidates from './pages/Candidates'
 import Recruiters from './pages/Recruiters'
 import Companies from './pages/Companies'
 import Pipeline from './pages/Pipeline'
+import Attendance from './pages/Attendance'
+import Teams from './pages/Teams'
+import UserManagement from './pages/UserManagement'
 
 function Layout({ children }) {
   return (
     <div className="app">
       <Sidebar />
-      <div className="main">
-        {children}
-      </div>
-    </div>
-  )
-}
-
-function Topbar({ title, sub }) {
-  return (
-    <div className="topbar">
-      <div>
-        <div className="topbar-title">{title}</div>
-        {sub && <div className="topbar-sub">{sub}</div>}
-      </div>
+      <div className="main">{children}</div>
     </div>
   )
 }
 
 function AppContent() {
-  const { isLoggedIn } = useApp()
+  const { isLoggedIn, isSuperAdmin, isCompanyAdmin, isTeamLead } = useApp()
 
-  if (!isLoggedIn) {
-    return <Login />
-  }
+  if (!isLoggedIn) return <Login />
 
   return (
     <Layout>
@@ -47,7 +35,17 @@ function AppContent() {
         <Route path="/candidates" element={<Candidates />} />
         <Route path="/pipeline" element={<Pipeline />} />
         <Route path="/recruiters" element={<Recruiters />} />
-        <Route path="/companies" element={<Companies />} />
+        <Route path="/attendance" element={<Attendance />} />
+        {(isSuperAdmin || isCompanyAdmin) && (
+          <Route path="/companies" element={<Companies />} />
+        )}
+        {(isSuperAdmin || isCompanyAdmin || isTeamLead) && (
+          <Route path="/teams" element={<Teams />} />
+        )}
+        {(isSuperAdmin || isCompanyAdmin || isTeamLead) && (
+          <Route path="/users" element={<UserManagement />} />
+        )}
+        <Route path="*" element={<Dashboard />} />
       </Routes>
     </Layout>
   )

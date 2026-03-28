@@ -61,7 +61,7 @@ function JobForm({ initial={}, onSave, onClose, companies }) {
 }
 
 export default function Jobs() {
-  const { jobs, companies, candidates, addJob, updateJob, deleteJob, setJobStatus } = useApp()
+  const { visibleJobs: jobs, visibleCompanies: companies, visibleCandidates: candidates, addJob, updateJob, deleteJob, setJobStatus } = useApp()
   const [search, setSearch] = useState('')
   const [filterStatus, setFilterStatus] = useState('All')
   const [filterCompany, setFilterCompany] = useState('All')

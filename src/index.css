@@ -552,6 +552,12 @@ textarea.form-control { resize: vertical; min-height: 80px; }
 .toast.error { border-left: 3px solid var(--red); }
 .toast.info { border-left: 3px solid var(--accent); }
 
+/* Pulse animation for live indicators */
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
 /* Responsive */
 @media (max-width: 900px) {
   .chart-grid { grid-template-columns: 1fr; }
