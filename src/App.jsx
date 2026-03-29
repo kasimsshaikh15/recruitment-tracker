@@ -8,6 +8,7 @@ import Jobs from './pages/Jobs'
 import Candidates from './pages/Candidates'
 import Recruiters from './pages/Recruiters'
 import Companies from './pages/Companies'
+import RecruitmentPartners from './pages/RecruitmentPartners'
 import Pipeline from './pages/Pipeline'
 import Attendance from './pages/Attendance'
 import Teams from './pages/Teams'
@@ -37,13 +38,16 @@ function AppContent() {
         <Route path="/recruiters" element={<Recruiters />} />
         <Route path="/attendance" element={<Attendance />} />
         {(isSuperAdmin || isCompanyAdmin) && (
-          <Route path="/companies" element={<Companies />} />
+          <>
+            <Route path="/companies" element={<Companies />} />
+            <Route path="/recruitment-partners" element={<RecruitmentPartners />} />
+          </>
         )}
         {(isSuperAdmin || isCompanyAdmin || isTeamLead) && (
-          <Route path="/teams" element={<Teams />} />
-        )}
-        {(isSuperAdmin || isCompanyAdmin || isTeamLead) && (
-          <Route path="/users" element={<UserManagement />} />
+          <>
+            <Route path="/teams" element={<Teams />} />
+            <Route path="/users" element={<UserManagement />} />
+          </>
         )}
         <Route path="*" element={<Dashboard />} />
       </Routes>

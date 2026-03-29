@@ -5,8 +5,8 @@ import { exportBackup as doExportBackup, readBackupFile } from '../utils/backup'
 // ─── Constants ────────────────────────────────────────────────────────────────
 const COLORS = ['#4f7cff','#a855f7','#22c55e','#f59e0b','#06b6d4','#f97316','#ec4899','#14b8a6']
 const DB_NAME = 'HireTrakkrDB'
-const DB_VERSION = 2
-const STORES = ['candidates','recruiters','jobs','companies','teams','users','attendance']
+const DB_VERSION = 3
+const STORES = ['candidates','recruiters','jobs','companies','teams','users','attendance','recruitmentPartners']
 export const STATUSES = ['📅 Interview Scheduled','➡️ Next Level','✅ Selected','🎉 Joined','❌ Rejected','🚫 Exit','⏸️ On Hold']
 
 let _id = Date.now()
@@ -64,6 +64,14 @@ const seed = () => {
     { id:'r5', name:'Sneha Iyer',   email:'sneha@hiretrakkr.com', phone:'9876543214', specialization:'Design',       companyId:'c5', teamId:null  },
   ]
 
+  const recruitmentPartners = [
+    { id:'rp1', name:'StarRecruiters',       email:'contact@starrecruiters.com',       phone:'9988776655', specialization:'Tech Staffing',   companyId:'c1', website:'starrecruiters.com', contactPerson:'Ravi Sharma', notes:'Excellent for backend roles' },
+    { id:'rp2', name:'TechTalent Solutions', email:'info@techtalent.com',              phone:'9988776656', specialization:'IT Recruitment', companyId:'c1', website:'techtalent.com', contactPerson:'Priya Nair', notes:'Specialized in Python developers' },
+    { id:'rp3', name:'GlobalStaff',         email:'sales@globalstaff.com',            phone:'9988776657', specialization:'Multi-domain',   companyId:'c2', website:'globalstaff.com', contactPerson:'Suresh Patel', notes:'International candidates' },
+    { id:'rp4', name:'Elite Recruiters',    email:'hello@eliterecruitors.com',        phone:'9988776658', specialization:'Senior Roles',    companyId:'c3', website:'eliterecruitors.com', contactPerson:'Anita Verma', notes:'Executive placements' },
+    { id:'rp5', name:'NextGen Talent',      email:'team@nextgentalent.com',           phone:'9988776659', specialization:'Entry-Level',     companyId:'c4', website:'nextgentalent.com', contactPerson:'Vikram Singh', notes:'Fresh graduates specialist' },
+  ]
+
   const jobs = [
     { id:'j1', title:'Software Engineer',     companyId:'c1', location:'Bangalore', experience:'2-5 years', skills:['Python','Java'],                 qualification:'B.Tech/M.Tech', status:'Open',   postedDate:'2025-12-01', description:'Build scalable backend services.' },
     { id:'j2', title:'Senior Data Scientist', companyId:'c2', location:'Pune',      experience:'4-8 years', skills:['Python','ML','SQL'],              qualification:'M.Tech/PhD',    status:'Open',   postedDate:'2025-12-05', description:'Lead ML initiatives.' },
@@ -94,7 +102,7 @@ const seed = () => {
     notes:       ''
   }))
 
-  return { companies, teams, users, recruiters, jobs, candidates, attendance: [] }
+  return { companies, teams, users, recruiters, recruitmentPartners, jobs, candidates, attendance: [] }
 }
 
 // ─── Auth Storage ─────────────────────────────────────────────────────────────
@@ -177,6 +185,7 @@ export function AppProvider({ children }) {
   const [teams,      setTeams]      = useState([])
   const [users,      setUsers]      = useState([])
   const [recruiters, setRecruiters] = useState([])
+  const [recruitmentPartners, setRecruitmentPartners] = useState([])
   const [jobs,       setJobs]       = useState([])
   const [candidates, setCandidates] = useState([])
   const [attendance, setAttendance] = useState([])
@@ -202,21 +211,23 @@ export function AppProvider({ children }) {
             dbPutMany(db, 'teams',      s.teams),
             dbPutMany(db, 'users',      hashedUsers),
             dbPutMany(db, 'recruiters', s.recruiters),
+            dbPutMany(db, 'recruitmentPartners', s.recruitmentPartners),
             dbPutMany(db, 'jobs',       s.jobs),
             dbPutMany(db, 'candidates', s.candidates),
           ])
         }
-        const [cos, tms, usrs, recs, jbs, cands, att] = await Promise.all([
+        const [cos, tms, usrs, recs, rps, jbs, cands, att] = await Promise.all([
           dbGetAll(db, 'companies'),
           dbGetAll(db, 'teams'),
           dbGetAll(db, 'users'),
           dbGetAll(db, 'recruiters'),
+          dbGetAll(db, 'recruitmentPartners'),
           dbGetAll(db, 'jobs'),
           dbGetAll(db, 'candidates'),
           dbGetAll(db, 'attendance'),
         ])
         setCompanies(cos); setTeams(tms); setUsers(usrs)
-        setRecruiters(recs); setJobs(jbs); setCandidates(cands); setAttendance(att)
+        setRecruiters(recs); setRecruitmentPartners(rps); setJobs(jbs); setCandidates(cands); setAttendance(att)
       } catch (err) {
         console.error('IndexedDB error:', err)
       } finally {
@@ -280,21 +291,35 @@ export function AppProvider({ children }) {
   }, [])
 
   // ── Attendance ─────────────────────────────────────────────────────────────
-  const markAttendance = useCallback(async (recruiterId, status) => {
-    // Recruiter can only mark their own
-    if (isRecruiter && currentUser?.recruiterId !== recruiterId) return
+  const markAttendance = useCallback(async (personId, status, personType = 'recruiter') => {
+    // Recruiter can only mark their own, Team Lead can only mark their own
+    if (isRecruiter && currentUser?.recruiterId !== personId) return
+    if (isTeamLead && currentUser?.id !== personId) return
     const today = new Date().toISOString().slice(0, 10)
-    const id = `att_${recruiterId}_${today}`
-    const record = { id, recruiterId, status, date: today, markedAt: new Date().toISOString() }
+    const id = `att_${personId}_${today}`
+    const record = { id, personId, personType, status, date: today, markedAt: new Date().toISOString() }
     if (dbRef.current) await dbPut(dbRef.current, 'attendance', record)
     setAttendance(a => [...a.filter(x => x.id !== id), record])
-    const rec = recruiters.find(r => r.id === recruiterId)
-    if (rec) toast(`${rec.name} marked ${status}`)
-  }, [currentUser, isRecruiter, recruiters, toast])
+    let personName = ''
+    if (personType === 'recruiter') {
+      const rec = recruiters.find(r => r.id === personId)
+      personName = rec?.name || 'Unknown'
+    } else if (personType === 'teamLead') {
+      const tl = users.find(u => u.id === personId)
+      personName = tl?.name || 'Unknown'
+    }
+    if (personName) toast(`${personName} marked ${status}`)
+  }, [currentUser, isRecruiter, isTeamLead, recruiters, users, toast])
 
-  const getTodayAttendance = useCallback((recruiterId) => {
+  const getTodayAttendance = useCallback((personId) => {
     const today = new Date().toISOString().slice(0, 10)
-    return attendance.find(a => a.recruiterId === recruiterId && a.date === today) || null
+    return attendance.find(a => a.personId === personId && a.date === today) || null
+  }, [attendance])
+
+  // Backward compatibility: Get attendance by recruiterId
+  const getAttendanceByRecruiterId = useCallback((recruiterId) => {
+    const today = new Date().toISOString().slice(0, 10)
+    return attendance.find(a => a.personId === recruiterId && a.date === today && a.personType === 'recruiter') || null
   }, [attendance])
 
   // ── Scoped views ───────────────────────────────────────────────────────────
@@ -332,6 +357,13 @@ export function AppProvider({ children }) {
     return []
   }, [currentUser, recruiters, isSuperAdmin, isCompanyAdmin, isTeamLead, isRecruiter])
 
+  const visibleRecruitmentPartners = useMemo(() => {
+    if (!currentUser) return []
+    if (isSuperAdmin) return recruitmentPartners
+    if (isCompanyAdmin) return recruitmentPartners.filter(rp => rp.companyId === currentUser.companyId)
+    return []
+  }, [currentUser, recruitmentPartners, isSuperAdmin, isCompanyAdmin])
+
   const visibleJobs = useMemo(() => {
     if (!currentUser) return []
     if (isSuperAdmin) return jobs
@@ -359,16 +391,24 @@ export function AppProvider({ children }) {
     if (!currentUser) return []
     if (isSuperAdmin) return attendance
     if (isCompanyAdmin) {
-      const ids = recruiters.filter(r => r.companyId === currentUser.companyId).map(r => r.id)
-      return attendance.filter(a => ids.includes(a.recruiterId))
+      const recruiterIds = recruiters.filter(r => r.companyId === currentUser.companyId).map(r => r.id)
+      const teamLeadIds = users.filter(u => u.companyId === currentUser.companyId && u.role === 'teamLead').map(u => u.id)
+      return attendance.filter(a => 
+        recruiterIds.includes(a.personId) || teamLeadIds.includes(a.personId) ||
+        (a.recruiterId && recruiterIds.includes(a.recruiterId)) // backward compatibility
+      )
     }
     if (isTeamLead) {
-      const ids = recruiters.filter(r => r.teamId === currentUser.teamId).map(r => r.id)
-      return attendance.filter(a => ids.includes(a.recruiterId))
+      const recruiterIds = recruiters.filter(r => r.teamId === currentUser.teamId).map(r => r.id)
+      return attendance.filter(a => 
+        recruiterIds.includes(a.personId) || 
+        a.personId === currentUser.id ||
+        (a.recruiterId && recruiterIds.includes(a.recruiterId)) // backward compatibility
+      )
     }
-    if (isRecruiter) return attendance.filter(a => a.recruiterId === currentUser.recruiterId)
+    if (isRecruiter) return attendance.filter(a => a.personId === currentUser.recruiterId || a.recruiterId === currentUser.recruiterId)
     return []
-  }, [attendance, currentUser, recruiters, isSuperAdmin, isCompanyAdmin, isTeamLead, isRecruiter])
+  }, [attendance, currentUser, recruiters, users, isSuperAdmin, isCompanyAdmin, isTeamLead, isRecruiter])
 
   // ── CRUD: Companies ────────────────────────────────────────────────────────
   const addCompany = async (data) => {
@@ -440,6 +480,22 @@ export function AppProvider({ children }) {
     setRecruiters(r => r.filter(x => x.id !== id)); toast('Recruiter deleted', 'info')
   }
 
+  // ── CRUD: Recruitment Partners ─────────────────────────────────────────────
+  const addRecruitmentPartner = async (data) => {
+    const record = { ...data, id: uid() }
+    await dbPut(dbRef.current, 'recruitmentPartners', record)
+    setRecruitmentPartners(rp => [...rp, record]); toast('Recruitment Partner added')
+  }
+  const updateRecruitmentPartner = async (id, data) => {
+    const record = { ...recruitmentPartners.find(x => x.id === id), ...data }
+    await dbPut(dbRef.current, 'recruitmentPartners', record)
+    setRecruitmentPartners(rp => rp.map(x => x.id === id ? record : x)); toast('Recruitment Partner updated')
+  }
+  const deleteRecruitmentPartner = async (id) => {
+    await dbDelete(dbRef.current, 'recruitmentPartners', id)
+    setRecruitmentPartners(rp => rp.filter(x => x.id !== id)); toast('Recruitment Partner deleted', 'info')
+  }
+
   // ── CRUD: Jobs ─────────────────────────────────────────────────────────────
   const addJob = async (data) => {
     const record = { ...data, id: uid(), postedDate: new Date().toISOString().slice(0, 10) }
@@ -487,7 +543,7 @@ export function AppProvider({ children }) {
 
   // ── Backup & Restore ───────────────────────────────────────────────────────
   const exportAllData = () => {
-    doExportBackup({ companies, teams, users, recruiters, jobs, candidates, attendance })
+    doExportBackup({ companies, teams, users, recruiters, recruitmentPartners, jobs, candidates, attendance })
     toast('Backup downloaded successfully')
   }
 
@@ -501,6 +557,7 @@ export function AppProvider({ children }) {
         dbPutMany(dbRef.current, 'teams',      d.teams      || []),
         dbPutMany(dbRef.current, 'users',      d.users      || []),
         dbPutMany(dbRef.current, 'recruiters', d.recruiters || []),
+        dbPutMany(dbRef.current, 'recruitmentPartners', d.recruitmentPartners || []),
         dbPutMany(dbRef.current, 'jobs',       d.jobs       || []),
         dbPutMany(dbRef.current, 'candidates', d.candidates || []),
         dbPutMany(dbRef.current, 'attendance', d.attendance || []),
@@ -510,6 +567,7 @@ export function AppProvider({ children }) {
       setTeams(d.teams          || [])
       setUsers(d.users          || [])
       setRecruiters(d.recruiters|| [])
+      setRecruitmentPartners(d.recruitmentPartners || [])
       setJobs(d.jobs            || [])
       setCandidates(d.candidates|| [])
       setAttendance(d.attendance|| [])
@@ -537,18 +595,19 @@ export function AppProvider({ children }) {
       currentUser, isLoggedIn, login, logout,
       isSuperAdmin, isCompanyAdmin, isTeamLead, isRecruiter, canManage, canEdit,
       // Scoped views
-      visibleCompanies, visibleTeams, visibleUsers, visibleRecruiters,
+      visibleCompanies, visibleTeams, visibleUsers, visibleRecruiters, visibleRecruitmentPartners,
       visibleJobs, visibleCandidates, visibleAttendance,
       // Raw data (for lookups)
-      companies, teams, users, recruiters, jobs, candidates, attendance,
+      companies, teams, users, recruiters, recruitmentPartners, jobs, candidates, attendance,
       // Attendance
-      markAttendance, getTodayAttendance,
+      markAttendance, getTodayAttendance, getAttendanceByRecruiterId,
       // Backup & Restore
       exportAllData, importBackup,
       addCompany, updateCompany, deleteCompany,
       addTeam,    updateTeam,    deleteTeam,
       addUser,    updateUser,    deleteUser,
       addRecruiter, updateRecruiter, deleteRecruiter,
+      addRecruitmentPartner, updateRecruitmentPartner, deleteRecruitmentPartner,
       addJob,     updateJob,    deleteJob,     setJobStatus,
       addCandidate, updateCandidate, deleteCandidate, setCandidateStatus,
       STATUSES, toast, toasts,

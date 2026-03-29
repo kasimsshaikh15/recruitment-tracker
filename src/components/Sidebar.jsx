@@ -2,7 +2,7 @@ import React, { useRef } from 'react'
 import { NavLink } from 'react-router-dom'
 import { LayoutDashboard, Briefcase, Users, UserCheck, Building2,
   BarChart3, LogOut, Shield, UsersRound, CalendarCheck,
-  Download, Upload, AlertTriangle } from 'lucide-react'
+  Download, Upload, AlertTriangle, Handshake } from 'lucide-react'
 import { useApp } from '../context/AppContext'
 
 const ROLE_COLORS = {
@@ -116,10 +116,15 @@ export default function Sidebar() {
           <CalendarCheck /> Attendance
         </NavLink>
         {(isSuperAdmin || isCompanyAdmin) && (
-          <NavLink to="/companies" className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}>
-            <Building2 /> Companies
-            <span className="nav-badge">{companies.length}</span>
-          </NavLink>
+          <>
+            <NavLink to="/companies" className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}>
+              <Building2 /> Companies
+              <span className="nav-badge">{companies.length}</span>
+            </NavLink>
+            <NavLink to="/recruitment-partners" className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}>
+              <Handshake /> Recruitment Partners
+            </NavLink>
+          </>
         )}
         {(isSuperAdmin || isCompanyAdmin || isTeamLead) && (
           <NavLink to="/teams" className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}>
