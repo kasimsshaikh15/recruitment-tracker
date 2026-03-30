@@ -14,18 +14,20 @@ const STAGES = [
 ]
 
 export default function Pipeline() {
-  const { visibleCandidates: candidates, visibleJobs: jobs, visibleCompanies: companies, setCandidateStatus } = useApp()
+  const { visibleCandidates: candidates, visibleJobs: jobs, visibleCompanies: companies, visibleRecruitmentPartners: recruitmentPartners, setCandidateStatus } = useApp()
   const [search, setSearch] = useState('')
   const [filterCompany, setFilterCompany] = useState('All')
   const [filterJob, setFilterJob] = useState('All')
+  const [filterPartner, setFilterPartner] = useState('All')
   const [dragging, setDragging] = useState(null)
 
   const filtered = useMemo(() => candidates.filter(c => {
     if (filterCompany !== 'All' && c.companyId !== filterCompany) return false
     if (filterJob !== 'All' && c.jobId !== filterJob) return false
+    if (filterPartner !== 'All' && c.recruitmentPartnerId !== filterPartner) return false
     const q = search.toLowerCase()
     return !q || c.name.toLowerCase().includes(q)
-  }), [candidates, search, filterCompany, filterJob])
+  }), [candidates, search, filterCompany, filterJob, filterPartner])
 
   const handleDrop = (status) => {
     if (dragging && dragging.status !== status) {
@@ -56,6 +58,10 @@ export default function Pipeline() {
           <option value="All">All Jobs</option>
           {jobs.map(j=><option key={j.id} value={j.id}>{j.title}</option>)}
         </select>
+        <select className="filter-select" value={filterPartner} onChange={e=>setFilterPartner(e.target.value)}>
+          <option value="All">All Partners</option>
+          {recruitmentPartners.map(rp=><option key={rp.id} value={rp.id}>{rp.name}</option>)}
+        </select>
       </div>
 
       <div className="pipeline" style={{flex:1,alignItems:'flex-start'}}>
@@ -79,12 +85,14 @@ export default function Pipeline() {
                 {stageCandidates.map(c => {
                   const job = jobs.find(j=>j.id===c.jobId)
                   const co = companies.find(x=>x.id===c.companyId)
+                  const partner = recruitmentPartners.find(rp=>rp.id===c.recruitmentPartnerId)
                   return (
                     <div key={c.id} className="pipeline-card"
                       draggable
                       onDragStart={()=>setDragging(c)}
                       onDragEnd={()=>setDragging(null)}
-                      style={{opacity: dragging?.id===c.id ? 0.5 : 1}}>
+                      style={{opacity: dragging?.id===c.id ? 0.5 : 1}}
+                      title={partner ? `Partner: ${partner.name}` : ''}>
                       <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:8}}>
                         <Avatar name={c.name} size={26}/>
                         <div style={{minWidth:0}}>
@@ -96,6 +104,11 @@ export default function Pipeline() {
                         <div style={{display:'flex',alignItems:'center',gap:5,fontSize:11,color:'var(--text3)'}}>
                           <div style={{width:5,height:5,borderRadius:'50%',background:co.color}}/>
                           {co.name}
+                        </div>
+                      )}
+                      {partner && (
+                        <div style={{fontSize:11,color:'var(--accent)',marginTop:4}}>
+                          📌 {partner.name}
                         </div>
                       )}
                       <div style={{fontSize:11,color:'var(--text3)',marginTop:4}}>{c.experience}</div>

@@ -3,11 +3,17 @@ import { Plus, Search, Trash2, Edit3, MapPin, Clock, GraduationCap, CheckCircle,
 import { useApp } from '../context/AppContext'
 import { Modal, StatusBadge, SkillTags, SkillsInput, useSortable, usePagination, Pagination, Confirm, Avatar } from '../components/Shared'
 
-function JobForm({ initial={}, onSave, onClose, companies }) {
+function JobForm({ initial={}, onSave, onClose, companies, recruitmentPartners=[] }) {
   const [d, setD] = useState({
-    title:'', companyId:'', location:'', experience:'', skills:[], qualification:'', status:'Open', description:'', ...initial
+    title:'', companyId:'', location:'', experience:'', skills:[], qualification:'', status:'Open', description:'', recruitmentPartnerId:'', ...initial
   })
   const set = k => e => setD(x=>({...x,[k]:e.target.value}))
+  
+  // Filter recruitment partners by selected company
+  const filteredPartners = d.companyId 
+    ? recruitmentPartners.filter(rp => rp.companyId === d.companyId)
+    : []
+  
   return (
     <>
       <div className="form-grid">
@@ -20,6 +26,13 @@ function JobForm({ initial={}, onSave, onClose, companies }) {
           <select className="form-control" value={d.companyId} onChange={set('companyId')}>
             <option value="">Select company</option>
             {companies.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}
+          </select>
+        </div>
+        <div className="form-group">
+          <label>Recruitment Partner</label>
+          <select className="form-control" value={d.recruitmentPartnerId} onChange={set('recruitmentPartnerId')}>
+            <option value="">No Partner Assigned</option>
+            {filteredPartners.map(rp=><option key={rp.id} value={rp.id}>{rp.name}</option>)}
           </select>
         </div>
         <div className="form-group">
@@ -61,10 +74,11 @@ function JobForm({ initial={}, onSave, onClose, companies }) {
 }
 
 export default function Jobs() {
-  const { visibleJobs: jobs, visibleCompanies: companies, visibleCandidates: candidates, addJob, updateJob, deleteJob, setJobStatus } = useApp()
+  const { visibleJobs: jobs, visibleCompanies: companies, visibleCandidates: candidates, visibleRecruitmentPartners: recruitmentPartners, addJob, updateJob, deleteJob, setJobStatus } = useApp()
   const [search, setSearch] = useState('')
   const [filterStatus, setFilterStatus] = useState('All')
   const [filterCompany, setFilterCompany] = useState('All')
+  const [filterPartner, setFilterPartner] = useState('All')
   const [modal, setModal] = useState(null) // null | 'create' | {job}
   const [confirm, setConfirm] = useState(null)
 
@@ -72,14 +86,17 @@ export default function Jobs() {
     const q = search.toLowerCase()
     if (filterStatus !== 'All' && j.status !== filterStatus) return false
     if (filterCompany !== 'All' && j.companyId !== filterCompany) return false
+    if (filterPartner !== 'All' && j.recruitmentPartnerId !== filterPartner) return false
     return !q || j.title.toLowerCase().includes(q) || j.location?.toLowerCase().includes(q)
-  }), [jobs, search, filterStatus, filterCompany])
+  }), [jobs, search, filterStatus, filterCompany, filterPartner])
 
   const { sorted, toggle, SortIcon } = useSortable(filtered, 'title')
   const pag = usePagination(sorted, 15)
 
   const getCompany = id => companies.find(c=>c.id===id)
+  const getPartner = id => recruitmentPartners.find(rp=>rp.id===id)
   const getCandidateCount = jid => candidates.filter(c=>c.jobId===jid).length
+  const getAvailablePartners = companyId => recruitmentPartners.filter(rp => rp.companyId === companyId)
 
   return (
     <div className="content">
@@ -106,6 +123,10 @@ export default function Jobs() {
             <option value="All">All Companies</option>
             {companies.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}
           </select>
+          <select className="filter-select" value={filterPartner} onChange={e=>setFilterPartner(e.target.value)}>
+            <option value="All">All Partners</option>
+            {recruitmentPartners.map(rp=><option key={rp.id} value={rp.id}>{rp.name}</option>)}
+          </select>
           <span className="table-header-count">{filtered.length} results</span>
         </div>
 
@@ -114,6 +135,7 @@ export default function Jobs() {
             <tr>
               <th onClick={()=>toggle('title')}>Job Title <SortIcon col="title"/></th>
               <th>Company</th>
+              <th>Partner</th>
               <th onClick={()=>toggle('location')}>Location <SortIcon col="location"/></th>
               <th>Experience</th>
               <th>Skills</th>
@@ -126,6 +148,7 @@ export default function Jobs() {
           <tbody>
             {pag.slice.map(j => {
               const co = getCompany(j.companyId)
+              const partner = getPartner(j.recruitmentPartnerId)
               return (
                 <tr key={j.id}>
                   <td style={{fontWeight:500,color:'var(--text)'}}>{j.title}</td>
@@ -135,6 +158,7 @@ export default function Jobs() {
                       {co?.name || '—'}
                     </div>
                   </td>
+                  <td style={{color:'var(--text2)',fontSize:13}}>{partner?.name || '—'}</td>
                   <td><div style={{display:'flex',alignItems:'center',gap:4}}><MapPin size={12} style={{color:'var(--text3)'}}/>{j.location}</div></td>
                   <td><div style={{display:'flex',alignItems:'center',gap:4}}><Clock size={12} style={{color:'var(--text3)'}}/>{j.experience}</div></td>
                   <td><SkillTags skills={j.skills?.slice(0,2)}/></td>
@@ -167,6 +191,7 @@ export default function Jobs() {
           <JobForm
             initial={modal==='create' ? {} : modal}
             companies={companies}
+            recruitmentPartners={recruitmentPartners}
             onSave={d => { modal==='create' ? addJob(d) : updateJob(modal.id,d); setModal(null) }}
             onClose={()=>setModal(null)}
           />

@@ -13,12 +13,18 @@ const ACTIONS = [
   { label:'Exit', status:'🚫 Exit', cls:'btn-ghost', icon:<LogOut size={12}/> },
 ]
 
-function CandidateForm({ initial={}, onSave, onClose, companies, jobs, recruiters }) {
+function CandidateForm({ initial={}, onSave, onClose, companies, jobs, recruiters, recruitmentPartners=[] }) {
   const [d, setD] = useState({
-    name:'', jobId:'', companyId:'', recruiterId:'', experience:'', skills:[], location:'', gender:'Male',
-    qualification:'', status:'📅 Interview Scheduled', phone:'', email:'', notes:'', ...initial
+    name:'', jobId:'', companyId:'', recruiterId:'', recruitmentPartnerId:'', experience:'', skills:[], location:'', gender:'Male',
+    qualification:'', status:'📅 Interview Scheduled', phone:'', email:'', doj:'', tenureDays:60, notes:'', ...initial
   })
   const set = k => e => setD(x=>({...x,[k]:e.target.value}))
+  
+  // Filter recruitment partners by selected company
+  const filteredPartners = d.companyId 
+    ? recruitmentPartners.filter(rp => rp.companyId === d.companyId)
+    : []
+  
   return (
     <>
       <div className="form-grid">
@@ -48,9 +54,17 @@ function CandidateForm({ initial={}, onSave, onClose, companies, jobs, recruiter
             {recruiters.map(r=><option key={r.id} value={r.id}>{r.name}</option>)}
           </select>
         </div>
+        <div className="form-group"><label>Recruitment Partner</label>
+          <select className="form-control" value={d.recruitmentPartnerId} onChange={set('recruitmentPartnerId')}>
+            <option value="">No Partner</option>
+            {filteredPartners.map(rp=><option key={rp.id} value={rp.id}>{rp.name}</option>)}
+          </select>
+        </div>
         <div className="form-group"><label>Experience</label><input className="form-control" value={d.experience} onChange={set('experience')} placeholder="3 years"/></div>
         <div className="form-group"><label>Location</label><input className="form-control" value={d.location} onChange={set('location')} placeholder="Bangalore"/></div>
         <div className="form-group"><label>Qualification</label><input className="form-control" value={d.qualification} onChange={set('qualification')} placeholder="B.Tech"/></div>
+        <div className="form-group"><label>Date of Joining (DOJ)</label><input type="date" className="form-control" value={d.doj} onChange={set('doj')}/></div>
+        <div className="form-group"><label>Tenure Days</label><input type="number" className="form-control" value={d.tenureDays} onChange={set('tenureDays')} placeholder="60"/></div>
         <div className="form-group"><label>Status</label>
           <select className="form-control" value={d.status} onChange={set('status')}>
             {['📅 Interview Scheduled','➡️ Next Level','✅ Selected','🎉 Joined','❌ Rejected','🚫 Exit','⏸️ On Hold'].map(s=><option key={s}>{s}</option>)}
@@ -69,10 +83,13 @@ function CandidateForm({ initial={}, onSave, onClose, companies, jobs, recruiter
   )
 }
 
-function ProfileDrawer({ candidate, onClose, jobs, companies, recruiters, setCandidateStatus, onEdit }) {
+function ProfileDrawer({ candidate, onClose, jobs, companies, recruiters, recruitmentPartners=[], calculateTenureDays, setCandidateStatus, onEdit }) {
   const job = jobs.find(j=>j.id===candidate.jobId)
   const company = companies.find(c=>c.id===candidate.companyId)
   const recruiter = recruiters.find(r=>r.id===candidate.recruiterId)
+  const partner = recruitmentPartners.find(rp=>rp.id===candidate.recruitmentPartnerId)
+  
+  const tenureInfo = candidate.doj ? calculateTenureDays(candidate.doj, candidate.tenureDays) : null
 
   return (
     <div className="profile-drawer">
@@ -97,6 +114,7 @@ function ProfileDrawer({ candidate, onClose, jobs, companies, recruiters, setCan
           {[
             ['Company', company?.name, <MapPin size={12}/>],
             ['Recruiter', recruiter?.name, <User size={12}/>],
+            ['Partner', partner?.name, null],
             ['Experience', candidate.experience, null],
             ['Qualification', candidate.qualification, null],
             ['Location', candidate.location, <MapPin size={12}/>],
@@ -110,6 +128,44 @@ function ProfileDrawer({ candidate, onClose, jobs, companies, recruiters, setCan
           ))}
         </div>
 
+        {tenureInfo && (
+          <>
+            <div className="divider"/>
+            <div style={{marginBottom:16}}>
+              <div style={{fontSize:11,color:'var(--text3)',marginBottom:8,fontWeight:600}}>Tenure Information</div>
+              <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}}>
+                <div>
+                  <div style={{fontSize:11,color:'var(--text3)',marginBottom:2}}>Date of Joining</div>
+                  <div style={{fontSize:13,color:'var(--text)'}}>{candidate.doj}</div>
+                </div>
+                <div>
+                  <div style={{fontSize:11,color:'var(--text3)',marginBottom:2}}>Total Tenure Days</div>
+                  <div style={{fontSize:13,color:'var(--text)'}}>{candidate.tenureDays} days</div>
+                </div>
+                <div>
+                  <div style={{fontSize:11,color:'var(--text3)',marginBottom:2}}>Elapsed Days</div>
+                  <div style={{fontSize:13,color:'var(--text)'}}>{tenureInfo.elapsedDays}/{candidate.tenureDays}</div>
+                </div>
+                <div>
+                  <div style={{fontSize:11,color:'var(--text3)',marginBottom:2}}>Remaining Days</div>
+                  <div style={{fontSize:13,color:tenureInfo.remainingDays > 20 ? 'var(--text)' : 'var(--danger)'}}>{tenureInfo.remainingDays} days</div>
+                </div>
+                <div>
+                  <div style={{fontSize:11,color:'var(--text3)',marginBottom:2}}>Completion Date</div>
+                  <div style={{fontSize:13,color:'var(--text)'}}>{tenureInfo.completionDate}</div>
+                </div>
+                <div>
+                  <div style={{fontSize:11,color:'var(--text3)',marginBottom:2}}>Status</div>
+                  <div style={{fontSize:13,color:tenureInfo.isCompleted ? 'var(--success)' : 'var(--warning)'}}>
+                    {tenureInfo.isCompleted ? '✓ Completed' : '⏳ In Progress'}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </>
+        )}
+
+        <div className="divider"/>
         <div style={{marginBottom:16}}>
           <div style={{fontSize:11,color:'var(--text3)',marginBottom:6}}>Contact</div>
           <div style={{display:'flex',flexDirection:'column',gap:6}}>
@@ -153,11 +209,12 @@ function ProfileDrawer({ candidate, onClose, jobs, companies, recruiters, setCan
 }
 
 export default function Candidates() {
-  const { visibleCandidates: candidates, visibleJobs: jobs, visibleCompanies: companies, visibleRecruiters: recruiters, addCandidate, updateCandidate, deleteCandidate, setCandidateStatus } = useApp()
+  const { visibleCandidates: candidates, visibleJobs: jobs, visibleCompanies: companies, visibleRecruiters: recruiters, visibleRecruitmentPartners: recruitmentPartners, addCandidate, updateCandidate, deleteCandidate, setCandidateStatus, calculateTenureDays } = useApp()
   const [search, setSearch] = useState('')
   const [filterStatus, setFilterStatus] = useState('All')
   const [filterCompany, setFilterCompany] = useState('All')
   const [filterJob, setFilterJob] = useState('All')
+  const [filterPartner, setFilterPartner] = useState('All')
   const [modal, setModal] = useState(null)
   const [profile, setProfile] = useState(null)
   const [confirm, setConfirm] = useState(null)
@@ -167,8 +224,9 @@ export default function Candidates() {
     if (filterStatus !== 'All' && c.status !== filterStatus) return false
     if (filterCompany !== 'All' && c.companyId !== filterCompany) return false
     if (filterJob !== 'All' && c.jobId !== filterJob) return false
+    if (filterPartner !== 'All' && c.recruitmentPartnerId !== filterPartner) return false
     return !q || c.name.toLowerCase().includes(q) || c.email?.toLowerCase().includes(q) || c.location?.toLowerCase().includes(q)
-  }), [candidates, search, filterStatus, filterCompany, filterJob])
+  }), [candidates, search, filterStatus, filterCompany, filterJob, filterPartner])
 
   const { sorted, toggle, SortIcon } = useSortable(filtered, 'name')
   const pag = usePagination(sorted, 20)
@@ -201,6 +259,10 @@ export default function Candidates() {
             <option value="All">All Jobs</option>
             {jobs.map(j=><option key={j.id} value={j.id}>{j.title}</option>)}
           </select>
+          <select className="filter-select" value={filterPartner} onChange={e=>setFilterPartner(e.target.value)}>
+            <option value="All">All Partners</option>
+            {recruitmentPartners.map(rp=><option key={rp.id} value={rp.id}>{rp.name}</option>)}
+          </select>
           <span className="table-header-count">{filtered.length} results</span>
         </div>
 
@@ -211,6 +273,7 @@ export default function Candidates() {
               <th>Job</th>
               <th>Company</th>
               <th>Recruiter</th>
+              <th>Partner</th>
               <th onClick={()=>toggle('experience')}>Experience <SortIcon col="experience"/></th>
               <th>Skills</th>
               <th onClick={()=>toggle('location')}>Location <SortIcon col="location"/></th>
@@ -223,6 +286,7 @@ export default function Candidates() {
               const job = jobs.find(j=>j.id===c.jobId)
               const co = companies.find(x=>x.id===c.companyId)
               const rec = recruiters.find(r=>r.id===c.recruiterId)
+              const partner = recruitmentPartners.find(rp=>rp.id===c.recruitmentPartnerId)
               return (
                 <tr key={c.id}>
                   <td>
@@ -242,6 +306,7 @@ export default function Candidates() {
                     </div>
                   </td>
                   <td style={{fontSize:12}}>{rec?.name||'—'}</td>
+                  <td style={{fontSize:12}}>{partner?.name||'—'}</td>
                   <td style={{fontSize:12}}>{c.experience}</td>
                   <td><SkillTags skills={c.skills?.slice(0,2)}/></td>
                   <td style={{fontSize:12}}>{c.location}</td>
@@ -268,7 +333,7 @@ export default function Candidates() {
         <Modal title={modal==='create' ? 'Add Candidate' : 'Edit Candidate'} onClose={()=>setModal(null)} size="modal-lg">
           <CandidateForm
             initial={modal==='create' ? {} : modal}
-            companies={companies} jobs={jobs} recruiters={recruiters}
+            companies={companies} jobs={jobs} recruiters={recruiters} recruitmentPartners={recruitmentPartners}
             onSave={d=>{ modal==='create' ? addCandidate(d) : updateCandidate(modal.id,d); setModal(null) }}
             onClose={()=>setModal(null)}
           />
@@ -281,7 +346,8 @@ export default function Candidates() {
           <ProfileDrawer
             candidate={profile}
             onClose={()=>setProfile(null)}
-            jobs={jobs} companies={companies} recruiters={recruiters}
+            jobs={jobs} companies={companies} recruiters={recruiters} recruitmentPartners={recruitmentPartners}
+            calculateTenureDays={calculateTenureDays}
             setCandidateStatus={(id,s)=>{ setCandidateStatus(id,s); setProfile(c=>({...c,status:s})) }}
             onEdit={()=>{ setModal(profile); setProfile(null) }}
           />

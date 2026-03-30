@@ -73,34 +73,44 @@ const seed = () => {
   ]
 
   const jobs = [
-    { id:'j1', title:'Software Engineer',     companyId:'c1', location:'Bangalore', experience:'2-5 years', skills:['Python','Java'],                 qualification:'B.Tech/M.Tech', status:'Open',   postedDate:'2025-12-01', description:'Build scalable backend services.' },
-    { id:'j2', title:'Senior Data Scientist', companyId:'c2', location:'Pune',      experience:'4-8 years', skills:['Python','ML','SQL'],              qualification:'M.Tech/PhD',    status:'Open',   postedDate:'2025-12-05', description:'Lead ML initiatives.' },
-    { id:'j3', title:'Product Manager',       companyId:'c3', location:'Mumbai',    experience:'3-6 years', skills:['Product Strategy','Agile','SQL'], qualification:'MBA',           status:'Open',   postedDate:'2025-12-10', description:'Own product roadmap.' },
-    { id:'j4', title:'DevOps Engineer',       companyId:'c4', location:'Hyderabad', experience:'2-4 years', skills:['Docker','Kubernetes','AWS'],       qualification:'B.Tech',        status:'Closed', postedDate:'2025-11-20', description:'Manage CI/CD pipelines.' },
-    { id:'j5', title:'UI/UX Designer',        companyId:'c5', location:'Delhi',     experience:'1-3 years', skills:['Figma','Adobe XD','CSS'],          qualification:'B.Des',         status:'Open',   postedDate:'2025-12-12', description:'Design user-centric interfaces.' },
-    { id:'j6', title:'Frontend Developer',    companyId:'c1', location:'Bangalore', experience:'2-4 years', skills:['React','TypeScript','CSS'],        qualification:'B.Tech',        status:'Open',   postedDate:'2025-12-15', description:'Build responsive UIs.' },
-    { id:'j7', title:'Backend Engineer',      companyId:'c2', location:'Pune',      experience:'3-6 years', skills:['Node.js','PostgreSQL','Redis'],    qualification:'B.Tech/M.Tech', status:'Open',   postedDate:'2025-12-18', description:'Design APIs and microservices.' },
-    { id:'j8', title:'QA Engineer',           companyId:'c3', location:'Chennai',   experience:'2-5 years', skills:['Selenium','Jest','Python'],        qualification:'B.Tech',        status:'Closed', postedDate:'2025-11-25', description:'Ensure product quality.' },
+    { id:'j1', title:'Software Engineer',     companyId:'c1', location:'Bangalore', experience:'2-5 years', skills:['Python','Java'],                 qualification:'B.Tech/M.Tech', status:'Open',   postedDate:'2025-12-01', description:'Build scalable backend services.', recruitmentPartnerId:'rp1' },
+    { id:'j2', title:'Senior Data Scientist', companyId:'c2', location:'Pune',      experience:'4-8 years', skills:['Python','ML','SQL'],              qualification:'M.Tech/PhD',    status:'Open',   postedDate:'2025-12-05', description:'Lead ML initiatives.', recruitmentPartnerId:'rp3' },
+    { id:'j3', title:'Product Manager',       companyId:'c3', location:'Mumbai',    experience:'3-6 years', skills:['Product Strategy','Agile','SQL'], qualification:'MBA',           status:'Open',   postedDate:'2025-12-10', description:'Own product roadmap.', recruitmentPartnerId:'rp4' },
+    { id:'j4', title:'DevOps Engineer',       companyId:'c4', location:'Hyderabad', experience:'2-4 years', skills:['Docker','Kubernetes','AWS'],       qualification:'B.Tech',        status:'Closed', postedDate:'2025-11-20', description:'Manage CI/CD pipelines.', recruitmentPartnerId:'rp5' },
+    { id:'j5', title:'UI/UX Designer',        companyId:'c5', location:'Delhi',     experience:'1-3 years', skills:['Figma','Adobe XD','CSS'],          qualification:'B.Des',         status:'Open',   postedDate:'2025-12-12', description:'Design user-centric interfaces.', recruitmentPartnerId:'' },
+    { id:'j6', title:'Frontend Developer',    companyId:'c1', location:'Bangalore', experience:'2-4 years', skills:['React','TypeScript','CSS'],        qualification:'B.Tech',        status:'Open',   postedDate:'2025-12-15', description:'Build responsive UIs.', recruitmentPartnerId:'rp2' },
+    { id:'j7', title:'Backend Engineer',      companyId:'c2', location:'Pune',      experience:'3-6 years', skills:['Node.js','PostgreSQL','Redis'],    qualification:'B.Tech/M.Tech', status:'Open',   postedDate:'2025-12-18', description:'Design APIs and microservices.', recruitmentPartnerId:'rp3' },
+    { id:'j8', title:'QA Engineer',           companyId:'c3', location:'Chennai',   experience:'2-5 years', skills:['Selenium','Jest','Python'],        qualification:'B.Tech',        status:'Closed', postedDate:'2025-11-25', description:'Ensure product quality.', recruitmentPartnerId:'rp4' },
   ]
 
   const names = ['John Doe','Amit Sharma','Priya Gupta','Rahul Singh','Sneha Patel','Arjun Reddy','Meera Joshi','Siddharth Kumar','Kavitha Nair','Rohit Verma','Ananya Das','Vikas Mishra','Pooja Iyer','Suraj Pandey','Divya Menon','Karthik Rajan']
-  const candidates = names.map((name, i) => ({
-    id: `can${i+1}`,
-    name,
-    jobId:       jobs[i % jobs.length].id,
-    companyId:   recruiters[i % recruiters.length].companyId,
-    recruiterId: recruiters[i % recruiters.length].id,
-    experience:  `${(i % 6) + 1} years`,
-    skills:      [['Python','Java'],['React','TypeScript'],['Node.js','SQL'],['ML','Python'],['Figma','CSS'],['AWS','Docker']][i % 6],
-    location:    ['Bangalore','Pune','Mumbai','Hyderabad','Delhi','Chennai'][i % 6],
-    gender:      i % 2 === 0 ? 'Male' : 'Female',
-    qualification: ['B.Tech','M.Tech','MBA','B.Des','PhD'][i % 5],
-    status:      STATUSES[i % STATUSES.length],
-    phone:       `98765${String(43200 + i).padStart(5,'0')}`,
-    email:       `${name.toLowerCase().replace(' ','.')}@email.com`,
-    appliedDate: `2025-12-${String((i % 28)+1).padStart(2,'0')}`,
-    notes:       ''
-  }))
+  const candidates = names.map((name, i) => {
+    const jobId = jobs[i % jobs.length].id
+    const job = jobs.find(j => j.id === jobId)
+    const recruitmentPartnerId = job?.recruitmentPartnerId || ''
+    const daysAgo = (i % 60) + 1
+    const doj = i % 3 === 0 ? new Date(Date.now() - daysAgo * 24 * 60 * 60 * 1000).toISOString().slice(0, 10) : ''
+    return {
+      id: `can${i+1}`,
+      name,
+      jobId,
+      companyId:   recruiters[i % recruiters.length].companyId,
+      recruiterId: recruiters[i % recruiters.length].id,
+      recruitmentPartnerId,
+      experience:  `${(i % 6) + 1} years`,
+      skills:      [['Python','Java'],['React','TypeScript'],['Node.js','SQL'],['ML','Python'],['Figma','CSS'],['AWS','Docker']][i % 6],
+      location:    ['Bangalore','Pune','Mumbai','Hyderabad','Delhi','Chennai'][i % 6],
+      gender:      i % 2 === 0 ? 'Male' : 'Female',
+      qualification: ['B.Tech','M.Tech','MBA','B.Des','PhD'][i % 5],
+      status:      STATUSES[i % STATUSES.length],
+      phone:       `98765${String(43200 + i).padStart(5,'0')}`,
+      email:       `${name.toLowerCase().replace(' ','.')}@email.com`,
+      appliedDate: `2025-12-${String((i % 28)+1).padStart(2,'0')}`,
+      doj,
+      tenureDays:  60,
+      notes:       ''
+    }
+  })
 
   return { companies, teams, users, recruiters, recruitmentPartners, jobs, candidates, attendance: [] }
 }
@@ -226,8 +236,27 @@ export function AppProvider({ children }) {
           dbGetAll(db, 'candidates'),
           dbGetAll(db, 'attendance'),
         ])
+        
+        // ── Data Migration: Add new fields to existing jobs and candidates ────
+        const migratedJobs = jbs.map(j => ({
+          ...j,
+          recruitmentPartnerId: j.recruitmentPartnerId !== undefined ? j.recruitmentPartnerId : ''
+        }))
+        const migratedCandidates = cands.map(c => ({
+          ...c,
+          recruitmentPartnerId: c.recruitmentPartnerId !== undefined ? c.recruitmentPartnerId : '',
+          doj: c.doj || '',
+          tenureDays: c.tenureDays || 60
+        }))
+        
+        // Save migrated data back to DB if any changes were made
+        const jobsNeedMigration = jbs.some(j => j.recruitmentPartnerId === undefined)
+        const candsNeedMigration = cands.some(c => c.recruitmentPartnerId === undefined || c.doj === undefined)
+        if (jobsNeedMigration) await dbPutMany(db, 'jobs', migratedJobs)
+        if (candsNeedMigration) await dbPutMany(db, 'candidates', migratedCandidates)
+        
         setCompanies(cos); setTeams(tms); setUsers(usrs)
-        setRecruiters(recs); setRecruitmentPartners(rps); setJobs(jbs); setCandidates(cands); setAttendance(att)
+        setRecruiters(recs); setRecruitmentPartners(rps); setJobs(migratedJobs); setCandidates(migratedCandidates); setAttendance(att)
       } catch (err) {
         console.error('IndexedDB error:', err)
       } finally {
@@ -541,6 +570,23 @@ export function AppProvider({ children }) {
     setCandidates(c => c.map(x => x.id === id ? record : x)); toast(`Status → ${status}`)
   }
 
+  // ── Tenure Utilities ───────────────────────────────────────────────────────
+  const calculateTenureDays = useCallback((doj, tenureDays = 60) => {
+    if (!doj) return null
+    const joinDate = new Date(doj)
+    const today = new Date()
+    const completionDate = new Date(joinDate.getTime() + tenureDays * 24 * 60 * 60 * 1000)
+    const elapsedMs = today.getTime() - joinDate.getTime()
+    const elapsedDays = Math.floor(elapsedMs / (1000 * 60 * 60 * 24))
+    const remainingDays = Math.max(0, tenureDays - elapsedDays)
+    const isCompleted = elapsedDays >= tenureDays
+    return { elapsedDays, remainingDays, completionDate: completionDate.toISOString().slice(0, 10), isCompleted }
+  }, [])
+
+  const getRecruitmentPartner = useCallback((partnerId) => {
+    return recruitmentPartners.find(rp => rp.id === partnerId)
+  }, [recruitmentPartners])
+
   // ── Backup & Restore ───────────────────────────────────────────────────────
   const exportAllData = () => {
     doExportBackup({ companies, teams, users, recruiters, recruitmentPartners, jobs, candidates, attendance })
@@ -601,6 +647,8 @@ export function AppProvider({ children }) {
       companies, teams, users, recruiters, recruitmentPartners, jobs, candidates, attendance,
       // Attendance
       markAttendance, getTodayAttendance, getAttendanceByRecruiterId,
+      // Tenure & Partner utilities
+      calculateTenureDays, getRecruitmentPartner,
       // Backup & Restore
       exportAllData, importBackup,
       addCompany, updateCompany, deleteCompany,
