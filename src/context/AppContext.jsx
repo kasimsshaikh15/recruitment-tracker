@@ -65,11 +65,11 @@ const seed = () => {
   ]
 
   const recruitmentPartners = [
-    { id:'rp1', name:'StarRecruiters',       email:'contact@starrecruiters.com',       phone:'9988776655', specialization:'Tech Staffing',   companyId:'c1', website:'starrecruiters.com', contactPerson:'Ravi Sharma', notes:'Excellent for backend roles' },
-    { id:'rp2', name:'TechTalent Solutions', email:'info@techtalent.com',              phone:'9988776656', specialization:'IT Recruitment', companyId:'c1', website:'techtalent.com', contactPerson:'Priya Nair', notes:'Specialized in Python developers' },
-    { id:'rp3', name:'GlobalStaff',         email:'sales@globalstaff.com',            phone:'9988776657', specialization:'Multi-domain',   companyId:'c2', website:'globalstaff.com', contactPerson:'Suresh Patel', notes:'International candidates' },
-    { id:'rp4', name:'Elite Recruiters',    email:'hello@eliterecruitors.com',        phone:'9988776658', specialization:'Senior Roles',    companyId:'c3', website:'eliterecruitors.com', contactPerson:'Anita Verma', notes:'Executive placements' },
-    { id:'rp5', name:'NextGen Talent',      email:'team@nextgentalent.com',           phone:'9988776659', specialization:'Entry-Level',     companyId:'c4', website:'nextgentalent.com', contactPerson:'Vikram Singh', notes:'Fresh graduates specialist' },
+    { id:'rp1', name:'StarRecruiters',       email:'contact@starrecruiters.com',       phone:'9988776655', specialization:'Tech Staffing',   companyId:'c1', website:'starrecruiters.com', contactPerson:'Ravi Sharma', notes:'Excellent for backend roles', tenureDays:60 },
+    { id:'rp2', name:'TechTalent Solutions', email:'info@techtalent.com',              phone:'9988776656', specialization:'IT Recruitment', companyId:'c1', website:'techtalent.com', contactPerson:'Priya Nair', notes:'Specialized in Python developers', tenureDays:45 },
+    { id:'rp3', name:'GlobalStaff',         email:'sales@globalstaff.com',            phone:'9988776657', specialization:'Multi-domain',   companyId:'c2', website:'globalstaff.com', contactPerson:'Suresh Patel', notes:'International candidates', tenureDays:90 },
+    { id:'rp4', name:'Elite Recruiters',    email:'hello@eliterecruitors.com',        phone:'9988776658', specialization:'Senior Roles',    companyId:'c3', website:'eliterecruitors.com', contactPerson:'Anita Verma', notes:'Executive placements', tenureDays:60 },
+    { id:'rp5', name:'NextGen Talent',      email:'team@nextgentalent.com',           phone:'9988776659', specialization:'Entry-Level',     companyId:'c4', website:'nextgentalent.com', contactPerson:'Vikram Singh', notes:'Fresh graduates specialist', tenureDays:30 },
   ]
 
   const jobs = [
@@ -107,7 +107,6 @@ const seed = () => {
       email:       `${name.toLowerCase().replace(' ','.')}@email.com`,
       appliedDate: `2025-12-${String((i % 28)+1).padStart(2,'0')}`,
       doj,
-      tenureDays:  60,
       notes:       ''
     }
   })
@@ -237,26 +236,35 @@ export function AppProvider({ children }) {
           dbGetAll(db, 'attendance'),
         ])
         
-        // ── Data Migration: Add new fields to existing jobs and candidates ────
+        // ── Data Migration: Add/update fields ────
+        const migratedRecruitmentPartners = rps.map(rp => ({
+          ...rp,
+          tenureDays: rp.tenureDays !== undefined ? rp.tenureDays : 60
+        }))
         const migratedJobs = jbs.map(j => ({
           ...j,
           recruitmentPartnerId: j.recruitmentPartnerId !== undefined ? j.recruitmentPartnerId : ''
         }))
-        const migratedCandidates = cands.map(c => ({
-          ...c,
-          recruitmentPartnerId: c.recruitmentPartnerId !== undefined ? c.recruitmentPartnerId : '',
-          doj: c.doj || '',
-          tenureDays: c.tenureDays || 60
-        }))
+        const migratedCandidates = cands.map(c => {
+          // Remove per-candidate tenureDays - will fetch from partner instead
+          const { tenureDays: _ignore, ...restData } = c
+          return {
+            ...restData,
+            recruitmentPartnerId: c.recruitmentPartnerId !== undefined ? c.recruitmentPartnerId : '',
+            doj: c.doj || ''
+          }
+        })
         
         // Save migrated data back to DB if any changes were made
+        const partnersNeedMigration = rps.some(rp => rp.tenureDays === undefined)
         const jobsNeedMigration = jbs.some(j => j.recruitmentPartnerId === undefined)
-        const candsNeedMigration = cands.some(c => c.recruitmentPartnerId === undefined || c.doj === undefined)
+        const candsNeedMigration = cands.some(c => c.tenureDays !== undefined || c.recruitmentPartnerId === undefined || c.doj === undefined)
+        if (partnersNeedMigration) await dbPutMany(db, 'recruitmentPartners', migratedRecruitmentPartners)
         if (jobsNeedMigration) await dbPutMany(db, 'jobs', migratedJobs)
         if (candsNeedMigration) await dbPutMany(db, 'candidates', migratedCandidates)
         
         setCompanies(cos); setTeams(tms); setUsers(usrs)
-        setRecruiters(recs); setRecruitmentPartners(rps); setJobs(migratedJobs); setCandidates(migratedCandidates); setAttendance(att)
+        setRecruiters(recs); setRecruitmentPartners(migratedRecruitmentPartners); setJobs(migratedJobs); setCandidates(migratedCandidates); setAttendance(att)
       } catch (err) {
         console.error('IndexedDB error:', err)
       } finally {
@@ -571,15 +579,17 @@ export function AppProvider({ children }) {
   }
 
   // ── Tenure Utilities ───────────────────────────────────────────────────────
-  const calculateTenureDays = useCallback((doj, tenureDays = 60) => {
+  const calculateTenureDays = useCallback((doj, partner = null, tenureDays = null) => {
     if (!doj) return null
+    // Determine tenure days: partner > explicit param > default 60
+    const effectiveTenureDays = partner?.tenureDays ?? tenureDays ?? 60
     const joinDate = new Date(doj)
     const today = new Date()
-    const completionDate = new Date(joinDate.getTime() + tenureDays * 24 * 60 * 60 * 1000)
+    const completionDate = new Date(joinDate.getTime() + effectiveTenureDays * 24 * 60 * 60 * 1000)
     const elapsedMs = today.getTime() - joinDate.getTime()
     const elapsedDays = Math.floor(elapsedMs / (1000 * 60 * 60 * 24))
-    const remainingDays = Math.max(0, tenureDays - elapsedDays)
-    const isCompleted = elapsedDays >= tenureDays
+    const remainingDays = Math.max(0, effectiveTenureDays - elapsedDays)
+    const isCompleted = elapsedDays >= effectiveTenureDays
     return { elapsedDays, remainingDays, completionDate: completionDate.toISOString().slice(0, 10), isCompleted }
   }, [])
 

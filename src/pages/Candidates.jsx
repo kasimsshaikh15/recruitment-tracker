@@ -16,7 +16,7 @@ const ACTIONS = [
 function CandidateForm({ initial={}, onSave, onClose, companies, jobs, recruiters, recruitmentPartners=[] }) {
   const [d, setD] = useState({
     name:'', jobId:'', companyId:'', recruiterId:'', recruitmentPartnerId:'', experience:'', skills:[], location:'', gender:'Male',
-    qualification:'', status:'📅 Interview Scheduled', phone:'', email:'', doj:'', tenureDays:60, notes:'', ...initial
+    qualification:'', status:'📅 Interview Scheduled', phone:'', email:'', doj:'', notes:'', ...initial
   })
   const set = k => e => setD(x=>({...x,[k]:e.target.value}))
   
@@ -24,6 +24,10 @@ function CandidateForm({ initial={}, onSave, onClose, companies, jobs, recruiter
   const filteredPartners = d.companyId 
     ? recruitmentPartners.filter(rp => rp.companyId === d.companyId)
     : []
+  
+  // Get selected partner's tenure days
+  const selectedPartner = recruitmentPartners.find(rp => rp.id === d.recruitmentPartnerId)
+  const partnerTenureDays = selectedPartner?.tenureDays || 60
   
   return (
     <>
@@ -59,12 +63,16 @@ function CandidateForm({ initial={}, onSave, onClose, companies, jobs, recruiter
             <option value="">No Partner</option>
             {filteredPartners.map(rp=><option key={rp.id} value={rp.id}>{rp.name}</option>)}
           </select>
+          {selectedPartner && (
+            <small style={{color:'var(--text3)',marginTop:4,display:'block'}}>
+              ⏳ Default Tenure: {partnerTenureDays} days
+            </small>
+          )}
         </div>
         <div className="form-group"><label>Experience</label><input className="form-control" value={d.experience} onChange={set('experience')} placeholder="3 years"/></div>
         <div className="form-group"><label>Location</label><input className="form-control" value={d.location} onChange={set('location')} placeholder="Bangalore"/></div>
         <div className="form-group"><label>Qualification</label><input className="form-control" value={d.qualification} onChange={set('qualification')} placeholder="B.Tech"/></div>
         <div className="form-group"><label>Date of Joining (DOJ)</label><input type="date" className="form-control" value={d.doj} onChange={set('doj')}/></div>
-        <div className="form-group"><label>Tenure Days</label><input type="number" className="form-control" value={d.tenureDays} onChange={set('tenureDays')} placeholder="60"/></div>
         <div className="form-group"><label>Status</label>
           <select className="form-control" value={d.status} onChange={set('status')}>
             {['📅 Interview Scheduled','➡️ Next Level','✅ Selected','🎉 Joined','❌ Rejected','🚫 Exit','⏸️ On Hold'].map(s=><option key={s}>{s}</option>)}
@@ -89,7 +97,8 @@ function ProfileDrawer({ candidate, onClose, jobs, companies, recruiters, recrui
   const recruiter = recruiters.find(r=>r.id===candidate.recruiterId)
   const partner = recruitmentPartners.find(rp=>rp.id===candidate.recruitmentPartnerId)
   
-  const tenureInfo = candidate.doj ? calculateTenureDays(candidate.doj, candidate.tenureDays) : null
+  // Calculate tenure using partner's tenure days configuration
+  const tenureInfo = candidate.doj ? calculateTenureDays(candidate.doj, partner) : null
 
   return (
     <div className="profile-drawer">
@@ -140,11 +149,13 @@ function ProfileDrawer({ candidate, onClose, jobs, companies, recruiters, recrui
                 </div>
                 <div>
                   <div style={{fontSize:11,color:'var(--text3)',marginBottom:2}}>Total Tenure Days</div>
-                  <div style={{fontSize:13,color:'var(--text)'}}>{candidate.tenureDays} days</div>
+                  <div style={{fontSize:13,color:'var(--text)'}}>
+                    {partner?.tenureDays || 60} days {partner && <span style={{fontSize:11,color:'var(--text3)'}}>({partner.name})</span>}
+                  </div>
                 </div>
                 <div>
                   <div style={{fontSize:11,color:'var(--text3)',marginBottom:2}}>Elapsed Days</div>
-                  <div style={{fontSize:13,color:'var(--text)'}}>{tenureInfo.elapsedDays}/{candidate.tenureDays}</div>
+                  <div style={{fontSize:13,color:'var(--text)'}}>{tenureInfo.elapsedDays}/{partner?.tenureDays || 60}</div>
                 </div>
                 <div>
                   <div style={{fontSize:11,color:'var(--text3)',marginBottom:2}}>Remaining Days</div>

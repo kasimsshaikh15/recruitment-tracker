@@ -17,7 +17,7 @@ export default function RecruitmentPartners() {
   const [editingId, setEditingId] = useState(null)
   const [formData, setFormData] = useState({
     name: '', email: '', phone: '', specialization: '',
-    companyId: '', website: '', contactPerson: '', notes: ''
+    companyId: '', website: '', contactPerson: '', notes: '', tenureDays: 60
   })
 
   // Get available companies based on user role
@@ -53,6 +53,10 @@ export default function RecruitmentPartners() {
   const handleSave = async () => {
     if (!formData.name.trim() || !formData.email.trim() || !formData.companyId) {
       toast('Please fill in required fields: Name, Email, and Company', 'error')
+      return
+    }
+    if (formData.tenureDays < 1 || formData.tenureDays > 365) {
+      toast('Tenure Days must be between 1 and 365', 'error')
       return
     }
 
@@ -100,7 +104,7 @@ export default function RecruitmentPartners() {
         </div>
         {(isSuperAdmin || isCompanyAdmin) && (
           <button
-            onClick={() => { setIsAdding(true); setEditingId(null); setFormData({ name: '', email: '', phone: '', specialization: '', companyId: currentUser?.companyId || '', website: '', contactPerson: '', notes: '' }); }}
+            onClick={() => { setIsAdding(true); setEditingId(null); setFormData({ name: '', email: '', phone: '', specialization: '', companyId: currentUser?.companyId || '', website: '', contactPerson: '', notes: '', tenureDays: 60 }); }}
             style={{
               background: 'var(--accent)', color: 'white',
               border: 'none', borderRadius: 8, padding: '10px 16px',
@@ -254,6 +258,26 @@ export default function RecruitmentPartners() {
                   <option key={c.id} value={c.id}>{c.name}</option>
                 ))}
               </select>
+            </div>
+
+            {/* Tenure Days */}
+            <div>
+              <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text2)', display: 'block', marginBottom: 6 }}>
+                Default Tenure Days ⏳
+              </label>
+              <input
+                type="number" min="1" max="365" placeholder="e.g., 60"
+                value={formData.tenureDays}
+                onChange={(e) => setFormData({ ...formData, tenureDays: parseInt(e.target.value) || 60 })}
+                style={{
+                  width: '100%', padding: '8px 12px', borderRadius: 6,
+                  border: '1px solid var(--border)', background: 'var(--bg2)',
+                  color: 'var(--text)', fontSize: 12, boxSizing: 'border-box'
+                }}
+              />
+              <div style={{ fontSize: 10, color: 'var(--text3)', marginTop: 4 }}>
+                Automatically applied to candidates placed through this partner
+              </div>
             </div>
 
             {/* Notes */}

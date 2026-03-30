@@ -14,7 +14,7 @@ const STAGES = [
 ]
 
 export default function Pipeline() {
-  const { visibleCandidates: candidates, visibleJobs: jobs, visibleCompanies: companies, visibleRecruitmentPartners: recruitmentPartners, setCandidateStatus } = useApp()
+  const { visibleCandidates: candidates, visibleJobs: jobs, visibleCompanies: companies, visibleRecruitmentPartners: recruitmentPartners, setCandidateStatus, calculateTenureDays } = useApp()
   const [search, setSearch] = useState('')
   const [filterCompany, setFilterCompany] = useState('All')
   const [filterJob, setFilterJob] = useState('All')
@@ -86,6 +86,7 @@ export default function Pipeline() {
                   const job = jobs.find(j=>j.id===c.jobId)
                   const co = companies.find(x=>x.id===c.companyId)
                   const partner = recruitmentPartners.find(rp=>rp.id===c.recruitmentPartnerId)
+                  const tenureInfo = c.doj ? calculateTenureDays(c.doj, partner) : null
                   return (
                     <div key={c.id} className="pipeline-card"
                       draggable
@@ -109,6 +110,11 @@ export default function Pipeline() {
                       {partner && (
                         <div style={{fontSize:11,color:'var(--accent)',marginTop:4}}>
                           📌 {partner.name}
+                        </div>
+                      )}
+                      {tenureInfo && (
+                        <div style={{fontSize:11,color:tenureInfo.isCompleted ? 'var(--success)' : tenureInfo.remainingDays > 20 ? 'var(--text3)' : 'var(--warning)',marginTop:4}}>
+                          ⏳ {tenureInfo.remainingDays} days left
                         </div>
                       )}
                       <div style={{fontSize:11,color:'var(--text3)',marginTop:4}}>{c.experience}</div>
