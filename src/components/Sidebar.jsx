@@ -1,8 +1,10 @@
 import React, { useRef } from 'react'
 import { NavLink } from 'react-router-dom'
-import { LayoutDashboard, Briefcase, Users, UserCheck, Building2,
+import {
+  LayoutDashboard, Briefcase, Users, UserCheck, Building2,
   BarChart3, LogOut, Shield, UsersRound, CalendarCheck,
-  Download, Upload, AlertTriangle, Handshake } from 'lucide-react'
+  Download, Upload, AlertTriangle, Handshake, Zap,
+} from 'lucide-react'
 import { useApp } from '../context/AppContext'
 
 const ROLE_COLORS = {
@@ -20,8 +22,10 @@ const ROLE_LABELS = {
 
 export default function Sidebar() {
   const {
-    visibleJobs: jobs, visibleCandidates: candidates,
-    visibleCompanies: companies, visibleRecruiters: recruiters,
+    visibleJobs: jobs,
+    visibleCandidates: candidates,
+    visibleCompanies: companies,
+    visibleRecruiters: recruiters,
     currentUser, logout,
     isSuperAdmin, isCompanyAdmin, isTeamLead, isRecruiter,
     exportAllData, importBackup,
@@ -35,11 +39,10 @@ export default function Sidebar() {
     const file = e.target.files?.[0]
     if (!file) return
     const ok = await importBackup(file)
-    // Reset input so same file can be re-selected
     e.target.value = ''
     if (ok) {
-      alert('✅ Backup restored successfully! Page will reload.')
-      setTimeout(() => window.location.reload(), 500)
+      // Data is updated in state — no reload needed since Firebase is source of truth
+      // The state setters in importBackup already update UI
     }
   }
 
@@ -47,159 +50,185 @@ export default function Sidebar() {
     <aside className="sidebar">
       {/* Logo */}
       <div className="sidebar-logo">
-        <img src="/logo.svg" alt="HireTrakkr Logo" style={{ width: '60px', marginBottom: '10px' }} />
-        <h1>HireTrakkr</h1>
+        <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:2 }}>
+          <div style={{
+            width:32, height:32, borderRadius:9,
+            background:'linear-gradient(135deg, #4f7cff 0%, #a855f7 100%)',
+            display:'flex', alignItems:'center', justifyContent:'center',
+            boxShadow:'0 0 16px rgba(79,124,255,0.4)',
+          }}>
+            <Zap size={16} color="white" fill="white" />
+          </div>
+          <h1 className="sidebar-logo-text">
+            Hire<span style={{ color:'var(--accent)' }}>Trakkr</span>
+          </h1>
+        </div>
         <p>hiretrakkr.com</p>
       </div>
 
-      {/* Logged-in user chip */}
+      {/* Role chip */}
       {currentUser && (
         <div style={{
-          margin: '0 12px 12px', padding: '10px 12px',
-          background: `${roleColor}11`, border: `1px solid ${roleColor}33`,
-          borderRadius: 8,
+          margin:'0 10px 10px',
+          padding:'10px 12px',
+          background:`${roleColor}10`,
+          border:`1px solid ${roleColor}28`,
+          borderRadius:9,
         }}>
-          <div style={{ fontWeight: 600, fontSize: 12, color: roleColor }}>
+          <div style={{ fontWeight:600, fontSize:12.5, color:roleColor }}>
             {currentUser.name || currentUser.username}
           </div>
-          <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 2 }}>
+          <div style={{ fontSize:11, color:'var(--text3)', marginTop:2 }}>
             {ROLE_LABELS[currentUser.role] || currentUser.role}
             {currentUser.role === 'superAdmin' && ' 🔐'}
           </div>
         </div>
       )}
 
-      {/* ── WARNING BANNER ── */}
+      {/* Warning banner */}
       <div style={{
-        margin: '0 12px 12px', padding: '10px 12px',
-        background: '#fef9c3', border: '1px solid #fbbf24',
-        borderRadius: 8, display: 'flex', gap: 8, alignItems: 'flex-start',
+        margin:'0 10px 10px',
+        padding:'9px 11px',
+        background:'rgba(245,158,11,0.06)',
+        border:'1px solid rgba(245,158,11,0.2)',
+        borderRadius:8,
+        display:'flex', gap:8, alignItems:'flex-start',
       }}>
-        <AlertTriangle size={14} style={{ color: '#d97706', flexShrink: 0, marginTop: 1 }} />
-        <div style={{ fontSize: 10, color: '#92400e', lineHeight: 1.5 }}>
-          <strong>Data stored in this browser only.</strong><br />
-          Do NOT clear browser cache.<br />
-          Take regular backups below.
+        <AlertTriangle size={13} style={{ color:'#f59e0b', flexShrink:0, marginTop:1 }} />
+        <div style={{ fontSize:10.5, color:'#92714a', lineHeight:1.5 }}>
+          <strong style={{ color:'#c98b3a' }}>Sync with HireTrakkr.</strong><br />
+          Export backups regularly.
         </div>
       </div>
 
-      {/* Nav sections */}
+      {/* Navigation */}
       <div className="sidebar-section">
         <div className="sidebar-section-label">Overview</div>
-        <NavLink to="/" end className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}>
+        <NavLink to="/" end className={({ isActive }) => `nav-item${isActive?' active':''}`}>
           <LayoutDashboard /> Dashboard
         </NavLink>
       </div>
 
       <div className="sidebar-section">
         <div className="sidebar-section-label">Recruitment</div>
-        <NavLink to="/jobs" className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}>
+        <NavLink to="/jobs" className={({ isActive }) => `nav-item${isActive?' active':''}`}>
           <Briefcase /> Job Postings
           {openJobs > 0 && <span className="nav-badge">{openJobs}</span>}
         </NavLink>
-        <NavLink to="/candidates" className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}>
+        <NavLink to="/candidates" className={({ isActive }) => `nav-item${isActive?' active':''}`}>
           <Users /> Candidates
           <span className="nav-badge">{candidates.length}</span>
         </NavLink>
-        <NavLink to="/pipeline" className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}>
+        <NavLink to="/pipeline" className={({ isActive }) => `nav-item${isActive?' active':''}`}>
           <BarChart3 /> Pipeline
         </NavLink>
       </div>
 
       <div className="sidebar-section">
         <div className="sidebar-section-label">Management</div>
-        <NavLink to="/recruiters" className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}>
+        <NavLink to="/recruiters" className={({ isActive }) => `nav-item${isActive?' active':''}`}>
           <UserCheck /> Recruiters
           {!isRecruiter && <span className="nav-badge">{recruiters.length}</span>}
         </NavLink>
-        <NavLink to="/attendance" className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}>
+        <NavLink to="/attendance" className={({ isActive }) => `nav-item${isActive?' active':''}`}>
           <CalendarCheck /> Attendance
         </NavLink>
         {(isSuperAdmin || isCompanyAdmin) && (
           <>
-            <NavLink to="/companies" className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}>
+            <NavLink to="/companies" className={({ isActive }) => `nav-item${isActive?' active':''}`}>
               <Building2 /> Companies
               <span className="nav-badge">{companies.length}</span>
             </NavLink>
-            <NavLink to="/recruitment-partners" className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}>
+            <NavLink to="/recruitment-partners" className={({ isActive }) => `nav-item${isActive?' active':''}`}>
               <Handshake /> Recruitment Partners
             </NavLink>
           </>
         )}
         {(isSuperAdmin || isCompanyAdmin || isTeamLead) && (
-          <NavLink to="/teams" className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}>
+          <NavLink to="/teams" className={({ isActive }) => `nav-item${isActive?' active':''}`}>
             <UsersRound /> Teams
           </NavLink>
         )}
         {(isSuperAdmin || isCompanyAdmin || isTeamLead) && (
-          <NavLink to="/users" className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}>
+          <NavLink to="/users" className={({ isActive }) => `nav-item${isActive?' active':''}`}>
             <Shield /> User Management
           </NavLink>
         )}
       </div>
 
-      {/* ── BACKUP SECTION ── */}
-      <div style={{ padding: '12px 12px 0' }}>
+      {/* Backup section */}
+      <div style={{ padding:'14px 10px 0' }}>
         <div style={{
-          fontSize: 10, fontWeight: 600, letterSpacing: 1,
-          textTransform: 'uppercase', color: 'var(--text3)', marginBottom: 8,
+          fontSize:9.5, fontWeight:700, letterSpacing:1.2,
+          textTransform:'uppercase', color:'var(--text3)', marginBottom:8, paddingLeft:4,
         }}>
           Data Backup
         </div>
 
-        {/* Export button */}
         <button
           onClick={exportAllData}
           style={{
-            width: '100%', display: 'flex', alignItems: 'center', gap: 8,
-            padding: '8px 12px', marginBottom: 6,
-            background: '#f0fdf4', border: '1px solid #22c55e44',
-            borderRadius: 6, color: '#15803d', cursor: 'pointer',
-            fontSize: 12, fontWeight: 500,
+            width:'100%', display:'flex', alignItems:'center', gap:8,
+            padding:'9px 12px', marginBottom:6,
+            background:'var(--green-bg)',
+            border:'1px solid rgba(34,197,94,0.2)',
+            borderRadius:8, color:'#4ade80',
+            cursor:'pointer', fontSize:12, fontWeight:500,
+            transition:'all 0.15s',
           }}
+          onMouseEnter={e => e.currentTarget.style.background='rgba(34,197,94,0.12)'}
+          onMouseLeave={e => e.currentTarget.style.background='rgba(34,197,94,0.07)'}
         >
           <Download size={13} /> Export Backup (.json)
         </button>
 
-        {/* Import button */}
         <button
           onClick={() => fileInputRef.current?.click()}
           style={{
-            width: '100%', display: 'flex', alignItems: 'center', gap: 8,
-            padding: '8px 12px',
-            background: '#eff6ff', border: '1px solid #3b82f644',
-            borderRadius: 6, color: '#1d4ed8', cursor: 'pointer',
-            fontSize: 12, fontWeight: 500,
+            width:'100%', display:'flex', alignItems:'center', gap:8,
+            padding:'9px 12px',
+            background:'var(--accent-glow)',
+            border:'1px solid rgba(79,124,255,0.2)',
+            borderRadius:8, color:'var(--accent2)',
+            cursor:'pointer', fontSize:12, fontWeight:500,
+            transition:'all 0.15s',
           }}
+          onMouseEnter={e => e.currentTarget.style.background='rgba(79,124,255,0.13)'}
+          onMouseLeave={e => e.currentTarget.style.background='rgba(79,124,255,0.07)'}
         >
           <Upload size={13} /> Restore Backup
         </button>
         <input
           ref={fileInputRef}
           type="file" accept=".json"
-          style={{ display: 'none' }}
+          style={{ display:'none' }}
           onChange={handleImport}
         />
-        <div style={{ fontSize: 10, color: 'var(--text3)', marginTop: 6, paddingLeft: 4 }}>
+        <div style={{ fontSize:10, color:'var(--text3)', marginTop:6, paddingLeft:4, lineHeight:1.5 }}>
           Backup regularly to avoid data loss
         </div>
       </div>
 
       {/* Footer */}
-      <div style={{ marginTop: 'auto', padding: '16px 20px', borderTop: '1px solid var(--border)' }}>
+      <div style={{ marginTop:'auto', padding:'16px 12px', borderTop:'1px solid var(--border)' }}>
         <button
           onClick={logout}
           style={{
-            width: '100%', display: 'flex', alignItems: 'center', gap: 8,
-            padding: '8px 12px', background: 'var(--bg2)',
-            border: '1px solid var(--border)', borderRadius: 4,
-            color: 'var(--text)', cursor: 'pointer',
+            width:'100%', display:'flex', alignItems:'center', gap:9,
+            padding:'9px 12px',
+            background:'var(--red-bg)',
+            border:'1px solid rgba(239,68,68,0.15)',
+            borderRadius:8, color:'#f87171',
+            cursor:'pointer', fontSize:13, fontWeight:500,
+            transition:'all 0.15s',
           }}
+          onMouseEnter={e => e.currentTarget.style.background='rgba(239,68,68,0.12)'}
+          onMouseLeave={e => e.currentTarget.style.background='rgba(239,68,68,0.06)'}
         >
-          <LogOut size={16} /> Logout
+          <LogOut size={15} /> Logout
         </button>
-        <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 8 }}>HireTrakkr v2.0</div>
-        <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 2 }}>Enterprise Edition</div>
+        <div style={{ fontSize:11, color:'var(--text3)', marginTop:10, paddingLeft:2 }}>HireTrakkr v3.0</div>
+        <div style={{ fontSize:10, color:'var(--text3)', marginTop:1, paddingLeft:2 }}>Firebase Edition</div>
       </div>
     </aside>
   )

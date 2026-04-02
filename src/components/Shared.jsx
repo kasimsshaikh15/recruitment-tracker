@@ -90,7 +90,7 @@ export function useSortable(data, defaultKey='') {
 }
 
 // ─── Pagination ───────────────────────────────────────────────────────────────
-export function usePagination(data, pageSize=20) {
+export function usePagination(data, pageSize=10) {
   const [page, setPage] = useState(1)
   const total = data.length
   const pages = Math.max(1, Math.ceil(total / pageSize))
@@ -146,6 +146,43 @@ export function SkillsInput({ value=[], onChange }) {
           </span>
         ))}
       </div>
+    </div>
+  )
+}
+
+// ─── Audit Info ───────────────────────────────────────────────────────────────
+export function AuditInfo({ createdBy, createdByName, createdAt, updatedBy, updatedByName, updatedAt }) {
+  const formatDate = (isoString) => {
+    if (!isoString) return 'N/A'
+    const date = new Date(isoString)
+    return new Intl.DateTimeFormat('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit'
+    }).format(date)
+  }
+
+  return (
+    <div style={{
+      background: 'var(--bg2)',
+      border: '1px solid var(--border)',
+      borderRadius: '8px',
+      padding: '12px',
+      fontSize: '12px',
+      color: 'var(--text2)',
+      marginTop: '12px'
+    }}>
+      <div style={{ marginBottom: '8px' }}>
+        <strong>Created:</strong> {createdByName || 'System'} on {formatDate(createdAt)}
+      </div>
+      {updatedAt && updatedAt !== createdAt && (
+        <div>
+          <strong>Last Updated:</strong> {updatedByName || 'System'} on {formatDate(updatedAt)}
+        </div>
+      )}
     </div>
   )
 }

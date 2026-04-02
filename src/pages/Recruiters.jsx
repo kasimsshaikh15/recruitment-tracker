@@ -98,7 +98,7 @@ export default function Recruiters() {
           <span className="table-header-count">{filtered.length} results</span>
         </div>
 
-        <table>
+        <div className="table-scroll"><table>
           <thead>
             <tr>
               <th onClick={() => toggle('name')}>Recruiter <SortIcon col="name" /></th>
@@ -140,7 +140,7 @@ export default function Recruiters() {
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12 }}>
                         <Mail size={11} style={{ color: 'var(--text3)' }} />
-                        <a href={`mailto:${r.email}`} style={{ color: 'var(--accent)', textDecoration: 'none' }}>{r.email}</a>
+                        <a href={`mailto:${r.email}`} className="email-link">{r.email}</a>
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12 }}>
                         <Phone size={11} style={{ color: 'var(--text3)' }} />
@@ -226,7 +226,7 @@ export default function Recruiters() {
               )
             })}
           </tbody>
-        </table>
+        </table></div>{/* ✅ FIXED: closes table-scroll */}
 
         {pag.slice.length === 0 && (
           <div className="empty-state">
@@ -236,7 +236,7 @@ export default function Recruiters() {
           </div>
         )}
         <Pagination pagination={pag} />
-      </div>
+      </div>{/* closes table-container */}
 
       {(modal === 'create' || (modal && modal.id)) && (
         <Modal title={modal === 'create' ? 'Create Recruiter' : 'Edit Recruiter'} onClose={() => setModal(null)}>

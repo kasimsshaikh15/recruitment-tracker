@@ -10,22 +10,29 @@ const SUPER_ADMIN_USERNAME = 'admin_hiretrakkr_system'
 const SUPER_ADMIN_PASSWORD = 'HireTrakkr@Admin#2026Secure'
 
 export default function Login() {
-  const { login } = useApp()
+  const { login, loading } = useApp()
   const navigate = useNavigate()
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError]       = useState('')
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
   const handleSubmit = async (e) => {
     e.preventDefault()
     setError('')
+    if (loading) { setError('Please wait while system is loading...'); return }
     if (!username.trim()) { setError('Please enter your username'); return }
     if (!password.trim()) { setError('Please enter your password');  return }
     
-    // Try to login (works for super admin with hardcoded creds, or other users from database)
-    const ok = await login(username.trim(), password)
-    if (ok) navigate('/')
-    else setError('Incorrect username or password.')
+    setIsSubmitting(true)
+    try {
+      // Try to login (works for super admin with hardcoded creds, or other users from database)
+      const ok = await login(username.trim(), password)
+      if (ok) navigate('/')
+      else setError('Incorrect username or password.')
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   const inp = {
@@ -76,19 +83,26 @@ export default function Login() {
               />
             </div>
 
+            {loading && (
+              <div style={{ background: '#efe', color: '#3a3', padding: '0.75rem', borderRadius: '6px', marginBottom: '1rem', fontSize: '0.875rem', border: '1px solid #3a3' }}>
+                ℹ️ System is loading, please wait...
+              </div>
+            )}
+
             {error && (
               <div style={{ background: '#fee', color: '#c33', padding: '0.75rem', borderRadius: '6px', marginBottom: '1rem', fontSize: '0.875rem', border: '1px solid #fcc' }}>
                 {error}
               </div>
             )}
 
-            <button type="submit" style={{
+            <button type="submit" disabled={loading || isSubmitting} style={{
               width: '100%', padding: '0.8rem',
-              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+              background: loading || isSubmitting ? '#ccc' : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
               color: 'white', border: 'none', borderRadius: '8px',
-              fontSize: '1rem', fontWeight: 600, cursor: 'pointer',
+              fontSize: '1rem', fontWeight: 600, cursor: loading || isSubmitting ? 'not-allowed' : 'pointer',
+              opacity: loading || isSubmitting ? 0.6 : 1,
             }}>
-              Sign In
+              {isSubmitting ? 'Signing In...' : 'Sign In'}
             </button>
           </form>
         </div>

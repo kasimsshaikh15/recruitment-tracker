@@ -3,7 +3,7 @@ import { Plus, Search, Trash2, Edit3, UsersRound } from 'lucide-react'
 import { useApp } from '../context/AppContext'
 import { Modal, Avatar, Confirm } from '../components/Shared'
 
-function TeamForm({ initial = {}, onSave, onClose, companies, users }) {
+function TeamForm({ initial = {}, onSave, onClose, companies = [], users = [] }) {
   const [d, setD] = useState({ name: '', companyId: '', teamLeadId: '', ...initial })
   const set = k => e => setD(x => ({ ...x, [k]: e.target.value }))
   const leads = users.filter(u => u.role === 'teamLead' && (!d.companyId || u.companyId === d.companyId))
@@ -37,8 +37,17 @@ function TeamForm({ initial = {}, onSave, onClose, companies, users }) {
 }
 
 export default function Teams() {
-  const { visibleTeams: teams, companies, users, recruiters, candidates, visibleAttendance,
-    addTeam, updateTeam, deleteTeam, isSuperAdmin, isCompanyAdmin, isTeamLead } = useApp()
+  const {
+    visibleTeams: teams = [],         // ✅ FIX
+    companies = [],                   // ✅ FIX
+    users = [],                       // ✅ FIX
+    recruiters = [],                  // ✅ FIX — crash at line 79
+    candidates = [],                  // ✅ FIX
+    visibleAttendance = [],           // ✅ FIX
+    addTeam, updateTeam, deleteTeam,
+    isSuperAdmin, isCompanyAdmin, isTeamLead,
+  } = useApp()
+
   const [search, setSearch] = useState('')
   const [modal, setModal] = useState(null)
   const [confirm, setConfirm] = useState(null)

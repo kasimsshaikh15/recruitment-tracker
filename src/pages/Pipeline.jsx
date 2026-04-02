@@ -14,7 +14,15 @@ const STAGES = [
 ]
 
 export default function Pipeline() {
-  const { visibleCandidates: candidates, visibleJobs: jobs, visibleCompanies: companies, visibleRecruitmentPartners: recruitmentPartners, setCandidateStatus, calculateTenureDays } = useApp()
+  const {
+    visibleCandidates: candidates = [],              // ✅ FIX
+    visibleJobs: jobs = [],                          // ✅ FIX
+    visibleCompanies: companies = [],                // ✅ FIX
+    visibleRecruitmentPartners: recruitmentPartners = [], // ✅ FIX — crash at line 63
+    setCandidateStatus,
+    calculateTenureDays = () => null, // ✅ FIX: fallback if not exported from context
+  } = useApp()
+
   const [search, setSearch] = useState('')
   const [filterCompany, setFilterCompany] = useState('All')
   const [filterJob, setFilterJob] = useState('All')

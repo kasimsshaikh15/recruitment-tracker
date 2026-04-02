@@ -3,17 +3,17 @@ import { Plus, Search, Trash2, Edit3, MapPin, Clock, GraduationCap, CheckCircle,
 import { useApp } from '../context/AppContext'
 import { Modal, StatusBadge, SkillTags, SkillsInput, useSortable, usePagination, Pagination, Confirm, Avatar } from '../components/Shared'
 
-function JobForm({ initial={}, onSave, onClose, companies, recruitmentPartners=[] }) {
+function JobForm({ initial={}, onSave, onClose, companies = [], recruitmentPartners = [] }) {
   const [d, setD] = useState({
     title:'', companyId:'', location:'', experience:'', skills:[], qualification:'', status:'Open', description:'', recruitmentPartnerId:'', ...initial
   })
   const set = k => e => setD(x=>({...x,[k]:e.target.value}))
-  
+
   // Filter recruitment partners by selected company
-  const filteredPartners = d.companyId 
+  const filteredPartners = d.companyId
     ? recruitmentPartners.filter(rp => rp.companyId === d.companyId)
     : []
-  
+
   return (
     <>
       <div className="form-grid">
@@ -74,12 +74,19 @@ function JobForm({ initial={}, onSave, onClose, companies, recruitmentPartners=[
 }
 
 export default function Jobs() {
-  const { visibleJobs: jobs, visibleCompanies: companies, visibleCandidates: candidates, visibleRecruitmentPartners: recruitmentPartners, addJob, updateJob, deleteJob, setJobStatus } = useApp()
+  const {
+    visibleJobs: jobs = [],                           // ✅ FIX
+    visibleCompanies: companies = [],                 // ✅ FIX
+    visibleCandidates: candidates = [],               // ✅ FIX
+    visibleRecruitmentPartners: recruitmentPartners = [], // ✅ FIX — was undefined, causing crash at line 128
+    addJob, updateJob, deleteJob, setJobStatus,
+  } = useApp()
+
   const [search, setSearch] = useState('')
   const [filterStatus, setFilterStatus] = useState('All')
   const [filterCompany, setFilterCompany] = useState('All')
   const [filterPartner, setFilterPartner] = useState('All')
-  const [modal, setModal] = useState(null) // null | 'create' | {job}
+  const [modal, setModal] = useState(null)
   const [confirm, setConfirm] = useState(null)
 
   const filtered = useMemo(() => jobs.filter(j => {
@@ -91,12 +98,11 @@ export default function Jobs() {
   }), [jobs, search, filterStatus, filterCompany, filterPartner])
 
   const { sorted, toggle, SortIcon } = useSortable(filtered, 'title')
-  const pag = usePagination(sorted, 15)
+  const pag = usePagination(sorted, 10)
 
   const getCompany = id => companies.find(c=>c.id===id)
   const getPartner = id => recruitmentPartners.find(rp=>rp.id===id)
   const getCandidateCount = jid => candidates.filter(c=>c.jobId===jid).length
-  const getAvailablePartners = companyId => recruitmentPartners.filter(rp => rp.companyId === companyId)
 
   return (
     <div className="content">
@@ -130,7 +136,7 @@ export default function Jobs() {
           <span className="table-header-count">{filtered.length} results</span>
         </div>
 
-        <table>
+        <div className="table-scroll"><table>
           <thead>
             <tr>
               <th onClick={()=>toggle('title')}>Job Title <SortIcon col="title"/></th>
@@ -179,7 +185,8 @@ export default function Jobs() {
               )
             })}
           </tbody>
-        </table>
+        </table></div>
+
         {pag.slice.length === 0 && (
           <div className="empty-state"><Search/><h3>No jobs found</h3><p>Try adjusting your filters</p></div>
         )}

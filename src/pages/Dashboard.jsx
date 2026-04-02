@@ -7,20 +7,20 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pi
 const COLORS = ['#4f7cff','#a855f7','#22c55e','#f59e0b','#06b6d4','#f97316','#ef4444']
 
 const ROLE_META = {
-  superAdmin:   { label: 'Super Admin',    color: '#ef4444', bg: '#fef2f2', icon: '🔐', desc: 'Viewing all companies & global data' },
-  companyAdmin: { label: 'Company Admin',  color: '#f97316', bg: '#fff7ed', icon: '🏢', desc: 'Viewing your company\'s teams & data' },
-  teamLead:     { label: 'Team Lead',      color: '#a855f7', bg: '#faf5ff', icon: '👥', desc: 'Viewing your team\'s recruiters & submissions' },
-  recruiter:    { label: 'Recruiter',      color: '#22c55e', bg: '#f0fdf4', icon: '🎯', desc: 'Viewing your own submissions & attendance' },
+  superAdmin:   { label: 'Super Admin',    color: '#ef4444', bg: 'rgba(239,68,68,0.08)', icon: '🔐', desc: 'Viewing all companies & global data' },
+  companyAdmin: { label: 'Company Admin',  color: '#f97316', bg: 'rgba(249,115,22,0.08)', icon: '🏢', desc: 'Viewing your company\'s teams & data' },
+  teamLead:     { label: 'Team Lead',      color: '#a855f7', bg: 'rgba(168,85,247,0.08)', icon: '👥', desc: 'Viewing your team\'s recruiters & submissions' },
+  recruiter:    { label: 'Recruiter',      color: '#22c55e', bg: 'rgba(34,197,94,0.08)', icon: '🎯', desc: 'Viewing your own submissions & attendance' },
 }
 
-function RoleBanner({ currentUser, visibleCompanies, teams }) {
+function RoleBanner({ currentUser, visibleCompanies = [], teams = [] }) {
   if (!currentUser) return null
   const meta = ROLE_META[currentUser.role] || {}
   const company = visibleCompanies[0]
   const team = teams.find(t => t.id === currentUser.teamId)
   return (
     <div style={{
-      background: meta.bg, border: `1px solid ${meta.color}33`,
+      background: `${meta.color}12`, border: `1px solid ${meta.color}30`,
       borderRadius: 10, padding: '12px 16px', marginBottom: 20,
       display: 'flex', alignItems: 'center', gap: 12,
     }}>
@@ -29,7 +29,7 @@ function RoleBanner({ currentUser, visibleCompanies, teams }) {
         <div style={{ fontWeight: 600, color: meta.color, fontSize: 13 }}>
           {currentUser.name || currentUser.username} — {meta.label}
         </div>
-        <div style={{ fontSize: 12, color: '#666', marginTop: 2 }}>
+        <div style={{ fontSize: 12, color: 'var(--text3)', marginTop: 2 }}>
           {meta.desc}
           {company && ` · ${company.name}`}
           {team && ` · ${team.name}`}
@@ -45,7 +45,8 @@ function RoleBanner({ currentUser, visibleCompanies, teams }) {
   )
 }
 
-function AttendanceSummary({ visibleAttendance, visibleRecruiters }) {
+// ✅ FIX: Added default empty arrays for both props to prevent .filter() on undefined
+function AttendanceSummary({ visibleAttendance = [], visibleRecruiters = [] }) {
   const today = new Date().toISOString().slice(0, 10)
   const todayAtt = visibleAttendance.filter(a => a.date === today)
   const present = todayAtt.filter(a => a.status === 'Present').length
@@ -79,11 +80,15 @@ function AttendanceSummary({ visibleAttendance, visibleRecruiters }) {
 
 export default function Dashboard() {
   const {
-    currentUser, visibleJobs: jobs, visibleCandidates: candidates,
-    visibleCompanies: companies, visibleRecruiters: recruiters,
-    visibleTeams: teams, visibleAttendance,
+    currentUser,
+    visibleJobs: jobs = [],               // ✅ FIX: fallback to []
+    visibleCandidates: candidates = [],   // ✅ FIX: fallback to []
+    visibleCompanies: companies = [],     // ✅ FIX: fallback to []
+    visibleRecruiters: recruiters = [],   // ✅ FIX: fallback to []
+    visibleTeams: teams = [],             // ✅ FIX: fallback to []
+    visibleAttendance = [],               // ✅ FIX: fallback to []
     isSuperAdmin, isCompanyAdmin, isTeamLead, isRecruiter,
-    STATUSES,
+    STATUSES = [],                        // ✅ FIX: fallback to []
   } = useApp()
 
   const openJobs = jobs.filter(j => j.status === 'Open').length
@@ -110,7 +115,9 @@ export default function Dashboard() {
     ).length
   }))
 
-  const recent = [...candidates].sort((a, b) => b.appliedDate.localeCompare(a.appliedDate)).slice(0, 6)
+  const recent = [...candidates]
+    .sort((a, b) => (b.appliedDate || '').localeCompare(a.appliedDate || ''))
+    .slice(0, 6)
 
   const CustomTooltip = ({ active, payload, label }) => {
     if (!active || !payload?.length) return null
@@ -189,7 +196,7 @@ export default function Dashboard() {
         const myAtt = visibleAttendance.find(a => a.date === today)
         return (
           <div style={{
-            background: myAtt?.status === 'Present' ? '#f0fdf4' : myAtt?.status === 'Absent' ? '#fef2f2' : 'var(--surface)',
+            background: myAtt?.status === 'Present' ? 'var(--green-bg)' : myAtt?.status === 'Absent' ? '#fef2f2' : 'var(--surface)',
             border: `1px solid ${myAtt?.status === 'Present' ? '#22c55e33' : myAtt?.status === 'Absent' ? '#ef444433' : 'var(--border)'}`,
             borderRadius: 10, padding: '14px 18px', marginBottom: 20,
             display: 'flex', alignItems: 'center', gap: 12,

@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react'
 import { Plus, Search, Trash2, Edit3, Calendar, ArrowRight, CheckCircle, PartyPopper, XCircle, PauseCircle, LogOut, User, Phone, Mail, MapPin } from 'lucide-react'
 import { useApp } from '../context/AppContext'
-import { Modal, StatusBadge, SkillTags, SkillsInput, Avatar, useSortable, usePagination, Pagination, Confirm } from '../components/Shared'
+import { Modal, StatusBadge, SkillTags, SkillsInput, Avatar, useSortable, usePagination, Pagination, Confirm, AuditInfo } from '../components/Shared'
 
 const ACTIONS = [
   { label:'Schedule Interview', status:'📅 Interview Scheduled', cls:'btn-warning', icon:<Calendar size={12}/> },
@@ -13,22 +13,20 @@ const ACTIONS = [
   { label:'Exit', status:'🚫 Exit', cls:'btn-ghost', icon:<LogOut size={12}/> },
 ]
 
-function CandidateForm({ initial={}, onSave, onClose, companies, jobs, recruiters, recruitmentPartners=[] }) {
+function CandidateForm({ initial={}, onSave, onClose, companies=[], jobs=[], recruiters=[], recruitmentPartners=[] }) {
   const [d, setD] = useState({
     name:'', jobId:'', companyId:'', recruiterId:'', recruitmentPartnerId:'', experience:'', skills:[], location:'', gender:'Male',
     qualification:'', status:'📅 Interview Scheduled', phone:'', email:'', doj:'', notes:'', ...initial
   })
   const set = k => e => setD(x=>({...x,[k]:e.target.value}))
-  
-  // Filter recruitment partners by selected company
-  const filteredPartners = d.companyId 
+
+  const filteredPartners = d.companyId
     ? recruitmentPartners.filter(rp => rp.companyId === d.companyId)
     : []
-  
-  // Get selected partner's tenure days
+
   const selectedPartner = recruitmentPartners.find(rp => rp.id === d.recruitmentPartnerId)
   const partnerTenureDays = selectedPartner?.tenureDays || 60
-  
+
   return (
     <>
       <div className="form-grid">
@@ -91,13 +89,12 @@ function CandidateForm({ initial={}, onSave, onClose, companies, jobs, recruiter
   )
 }
 
-function ProfileDrawer({ candidate, onClose, jobs, companies, recruiters, recruitmentPartners=[], calculateTenureDays, setCandidateStatus, onEdit }) {
+function ProfileDrawer({ candidate, onClose, jobs=[], companies=[], recruiters=[], recruitmentPartners=[], calculateTenureDays, setCandidateStatus, onEdit }) {
   const job = jobs.find(j=>j.id===candidate.jobId)
   const company = companies.find(c=>c.id===candidate.companyId)
   const recruiter = recruiters.find(r=>r.id===candidate.recruiterId)
   const partner = recruitmentPartners.find(rp=>rp.id===candidate.recruitmentPartnerId)
-  
-  // Calculate tenure using partner's tenure days configuration
+
   const tenureInfo = candidate.doj ? calculateTenureDays(candidate.doj, partner) : null
 
   return (
@@ -186,7 +183,7 @@ function ProfileDrawer({ candidate, onClose, jobs, companies, recruiters, recrui
             </div>
             <div style={{display:'flex',alignItems:'center',gap:8,fontSize:13,color:'var(--text2)'}}>
               <Mail size={13} style={{color:'var(--text3)'}}/>
-              <a href={`mailto:${candidate.email}`} style={{color:'var(--accent)',textDecoration:'none'}}>{candidate.email}</a>
+              <a href={`mailto:${candidate.email}`} className="email-link">{candidate.email}</a>
             </div>
           </div>
         </div>
@@ -202,6 +199,16 @@ function ProfileDrawer({ candidate, onClose, jobs, companies, recruiters, recrui
             <div style={{fontSize:13,color:'var(--text2)',background:'var(--surface)',padding:'10px 12px',borderRadius:8}}>{candidate.notes}</div>
           </div>
         )}
+
+        <div className="divider"/>
+        <AuditInfo
+          createdBy={candidate.createdBy}
+          createdByName={candidate.createdByName}
+          createdAt={candidate.createdAt}
+          updatedBy={candidate.updatedBy}
+          updatedByName={candidate.updatedByName}
+          updatedAt={candidate.updatedAt}
+        />
 
         <div className="divider"/>
         <div style={{fontSize:12,fontWeight:600,color:'var(--text2)',marginBottom:10}}>Quick Actions</div>
@@ -220,7 +227,15 @@ function ProfileDrawer({ candidate, onClose, jobs, companies, recruiters, recrui
 }
 
 export default function Candidates() {
-  const { visibleCandidates: candidates, visibleJobs: jobs, visibleCompanies: companies, visibleRecruiters: recruiters, visibleRecruitmentPartners: recruitmentPartners, addCandidate, updateCandidate, deleteCandidate, setCandidateStatus, calculateTenureDays } = useApp()
+  const {
+    visibleCandidates: candidates = [],             // ✅ FIX
+    visibleJobs: jobs = [],                         // ✅ FIX
+    visibleCompanies: companies = [],               // ✅ FIX
+    visibleRecruiters: recruiters = [],             // ✅ FIX
+    visibleRecruitmentPartners: recruitmentPartners = [], // ✅ FIX — was causing crash at line 285
+    addCandidate, updateCandidate, deleteCandidate, setCandidateStatus, calculateTenureDays,
+  } = useApp()
+
   const [search, setSearch] = useState('')
   const [filterStatus, setFilterStatus] = useState('All')
   const [filterCompany, setFilterCompany] = useState('All')
@@ -277,7 +292,7 @@ export default function Candidates() {
           <span className="table-header-count">{filtered.length} results</span>
         </div>
 
-        <table>
+        <div className="table-scroll"><table>
           <thead>
             <tr>
               <th onClick={()=>toggle('name')}>Candidate <SortIcon col="name"/></th>
@@ -333,7 +348,8 @@ export default function Candidates() {
               )
             })}
           </tbody>
-        </table>
+        </table></div>
+
         {pag.slice.length === 0 && (
           <div className="empty-state"><Search/><h3>No candidates found</h3><p>Try adjusting your filters</p></div>
         )}

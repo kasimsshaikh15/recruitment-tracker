@@ -1,6 +1,7 @@
 {
   "name": "recruitment-tracker",
   "version": "1.0.0",
+  "type": "module",
   "description": "Enterprise Recruitment Tracker",
   "scripts": {
     "dev": "vite",
@@ -9,6 +10,7 @@
   },
   "dependencies": {
     "date-fns": "^3.6.0",
+    "firebase": "^12.11.0",
     "lucide-react": "^0.383.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
