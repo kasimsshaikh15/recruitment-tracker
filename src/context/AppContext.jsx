@@ -38,8 +38,8 @@ const AUTH_CURRENT_KEY = 'hiretrakkr_currentUser'
 const uid = () => crypto.randomUUID()
 
 const SUPER_ADMIN = {
-  username: 'admin_hiretrakkr_system',
-  password: 'HireTrakkr@Admin#2026Secure',
+  username: 'Superadmin',
+  password: 'Ysjhire@2026',
   role: 'superAdmin',
   name: 'Super Admin'
 }
@@ -67,7 +67,7 @@ export function AppProvider({ children }) {
   const [candidates,           setCandidates]           = useState([])
   const [recruiters,           setRecruiters]           = useState([])
   const [attendance,           setAttendance]           = useState([])
-  const [recruitmentPartners,  setRecruitmentPartners]  = useState([])  // ✅ NEW
+  const [recruitmentPartners,  setRecruitmentPartners]  = useState([])
   const [loading,              setLoading]              = useState(true)
   const [currentUser,          setCurrentUser]          = useState(null)
   const [isLoggedIn,           setIsLoggedIn]           = useState(false)
@@ -84,7 +84,7 @@ export function AppProvider({ children }) {
           fsGetAll('candidates'),
           fsGetAll('recruiters'),
           fsGetAll('attendance'),
-          fsGetAll('recruitmentPartners'),   // ✅ NEW
+          fsGetAll('recruitmentPartners'),
         ])
 
         setCompanies(cos)
@@ -94,7 +94,7 @@ export function AppProvider({ children }) {
         setCandidates(cands)
         setRecruiters(recs)
         setAttendance(atts)
-        setRecruitmentPartners(partners)    // ✅ NEW
+        setRecruitmentPartners(partners)
 
         if (localStorage.getItem(AUTH_LOGGED_KEY)) {
           const u = JSON.parse(localStorage.getItem(AUTH_CURRENT_KEY))
@@ -158,7 +158,39 @@ export function AppProvider({ children }) {
     return candidates.filter(c => c.recruiterId === currentUser?.recruiterId)
   }, [candidates, currentUser, isSuperAdmin, isCompanyAdmin, isTeamLead])
 
-  // ✅ NEW — Recruitment Partners visible by role
+  // ─── Visible Attendance (filtered by role) ────────────────────  ✅ NEW
+  const visibleAttendance = useMemo(() => {
+    if (isSuperAdmin) return attendance
+
+    if (isCompanyAdmin) {
+      const cid = currentUser?.companyId
+      const companyRecruiterIds = recruiters
+        .filter(r => r.companyId === cid)
+        .map(r => r.id)
+      const companyTLIds = users
+        .filter(u => u.role === 'teamLead' && u.companyId === cid)
+        .map(u => u.id)
+      return attendance.filter(
+        a => companyRecruiterIds.includes(a.personId) || companyTLIds.includes(a.personId)
+      )
+    }
+
+    if (isTeamLead) {
+      const teamRecruiterIds = recruiters
+        .filter(r => r.teamId === currentUser?.teamId)
+        .map(r => r.id)
+      return attendance.filter(
+        a => a.personId === currentUser?.id || teamRecruiterIds.includes(a.personId)
+      )
+    }
+
+    // recruiter — only their own records
+    return attendance.filter(
+      a => a.personId === currentUser?.recruiterId || a.personId === currentUser?.id
+    )
+  }, [attendance, currentUser, isSuperAdmin, isCompanyAdmin, isTeamLead, recruiters, users])
+
+  // ─── Visible Recruitment Partners ────────────────────────────
   const visibleRecruitmentPartners = useMemo(() => {
     if (isSuperAdmin) return recruitmentPartners
     if (isCompanyAdmin) return recruitmentPartners.filter(p => p.companyId === currentUser?.companyId)
@@ -312,7 +344,7 @@ export function AppProvider({ children }) {
     setCandidates(c => c.filter(x => x.id !== id))
   }
 
-  // ─── Recruitment Partners CRUD ────────────────────────────────  ✅ NEW
+  // ─── Recruitment Partners CRUD ────────────────────────────────
   const addRecruitmentPartner = async (data) => {
     const record = { ...data, id: uid() }
     await fsPut('recruitmentPartners', record)
@@ -331,11 +363,18 @@ export function AppProvider({ children }) {
     setRecruitmentPartners(p => p.filter(x => x.id !== id))
   }
 
-  // ─── Attendance ───────────────────────────────────────────────
-  const markAttendance = async (recruiterId, status) => {
-    const today = new Date().toISOString().split('T')[0]
-    const id = `${recruiterId}_${today}`
-    const record = { id, recruiterId, date: today, status }
+  // ─── Attendance ───────────────────────────────────────────────  ✅ UPDATED
+  const markAttendance = async (personId, status, personType = 'recruiter', date = null) => {
+    const dateStr = date || new Date().toISOString().split('T')[0]
+    const id = `${personId}_${dateStr}`
+    const record = {
+      id,
+      personId,
+      personType,
+      date: dateStr,
+      status,
+      markedAt: new Date().toISOString(),
+    }
     await fsPut('attendance', record)
     setAttendance(a => {
       const filtered = a.filter(x => x.id !== id)
@@ -343,9 +382,11 @@ export function AppProvider({ children }) {
     })
   }
 
-  const getTodayAttendance = (recruiterId) => {
+  const getTodayAttendance = (personId) => {
     const today = new Date().toISOString().split('T')[0]
-    return attendance.find(a => a.recruiterId === recruiterId && a.date === today)
+    return attendance.find(
+      a => (a.personId === personId || a.recruiterId === personId) && a.date === today
+    )
   }
 
   // ─── Backup ───────────────────────────────────────────────────
@@ -364,7 +405,7 @@ export function AppProvider({ children }) {
     await fsPutMany('candidates',          d.candidates          || [])
     await fsPutMany('recruiters',          d.recruiters          || [])
     await fsPutMany('attendance',          d.attendance          || [])
-    await fsPutMany('recruitmentPartners', d.recruitmentPartners || [])  // ✅ NEW
+    await fsPutMany('recruitmentPartners', d.recruitmentPartners || [])
 
     setCompanies(d.companies             || [])
     setTeams(d.teams                     || [])
@@ -373,7 +414,7 @@ export function AppProvider({ children }) {
     setCandidates(d.candidates           || [])
     setRecruiters(d.recruiters           || [])
     setAttendance(d.attendance           || [])
-    setRecruitmentPartners(d.recruitmentPartners || [])  // ✅ NEW
+    setRecruitmentPartners(d.recruitmentPartners || [])
 
     return true
   }
@@ -417,7 +458,7 @@ export function AppProvider({ children }) {
       candidates,
       recruiters,
       attendance,
-      recruitmentPartners,           // ✅ NEW
+      recruitmentPartners,
 
       // visible (role-filtered) data
       visibleCompanies,
@@ -426,7 +467,8 @@ export function AppProvider({ children }) {
       visibleRecruiters,
       visibleJobs,
       visibleCandidates,
-      visibleRecruitmentPartners,    // ✅ NEW
+      visibleAttendance,             // ✅ NEW
+      visibleRecruitmentPartners,
 
       // constants
       STATUSES,
@@ -461,7 +503,7 @@ export function AppProvider({ children }) {
       updateCandidate,
       deleteCandidate,
 
-      // recruitment partners         ✅ NEW
+      // recruitment partners
       addRecruitmentPartner,
       updateRecruitmentPartner,
       deleteRecruitmentPartner,
