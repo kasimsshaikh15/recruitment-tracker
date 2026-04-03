@@ -3,7 +3,7 @@ import { NavLink } from 'react-router-dom'
 import {
   LayoutDashboard, Briefcase, Users, UserCheck, Building2,
   BarChart3, LogOut, Shield, UsersRound, CalendarCheck,
-  Download, Upload, AlertTriangle, Handshake, Zap,
+  Download, Upload, AlertTriangle, Handshake, Database,
 } from 'lucide-react'
 import { useApp } from '../context/AppContext'
 
@@ -48,22 +48,19 @@ export default function Sidebar() {
 
   return (
     <aside className="sidebar">
-      {/* Logo */}
+      {/* Logo — uses actual /logo.svg file */}
       <div className="sidebar-logo">
-        <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:2 }}>
-          <div style={{
-            width:32, height:32, borderRadius:9,
-            background:'linear-gradient(135deg, #4f7cff 0%, #a855f7 100%)',
-            display:'flex', alignItems:'center', justifyContent:'center',
-            boxShadow:'0 0 16px rgba(79,124,255,0.4)',
-          }}>
-            <Zap size={16} color="white" fill="white" />
-          </div>
-          <h1 className="sidebar-logo-text">
-            Hire<span style={{ color:'var(--accent)' }}>Trakkr</span>
-          </h1>
-        </div>
+        <img src="/logo.svg" alt="HireTrakkr Logo" style={{ width:52, height:52, marginBottom:8, display:'block' }} />
+        <h1 style={{ fontFamily:'var(--font-display)', fontSize:18, color:'var(--text)', letterSpacing:-0.3, lineHeight:1.2 }}>
+          Hire<span style={{ color:'var(--accent)' }}>Trakkr</span>
+        </h1>
         <p>hiretrakkr.com</p>
+        {/* Firebase status badge */}
+        <div className="firebase-badge" style={{ marginTop:6 }}>
+          <span className="dot"/>
+          <Database size={9} style={{ opacity:0.6 }}/>
+          Make Hiring Simple
+        </div>
       </div>
 
       {/* Role chip */}
@@ -117,7 +114,7 @@ export default function Sidebar() {
         </NavLink>
         <NavLink to="/candidates" className={({ isActive }) => `nav-item${isActive?' active':''}`}>
           <Users /> Candidates
-          <span className="nav-badge">{candidates.length}</span>
+          {candidates.length > 0 && <span className="nav-badge">{candidates.length}</span>}
         </NavLink>
         <NavLink to="/pipeline" className={({ isActive }) => `nav-item${isActive?' active':''}`}>
           <BarChart3 /> Pipeline
@@ -128,7 +125,7 @@ export default function Sidebar() {
         <div className="sidebar-section-label">Management</div>
         <NavLink to="/recruiters" className={({ isActive }) => `nav-item${isActive?' active':''}`}>
           <UserCheck /> Recruiters
-          {!isRecruiter && <span className="nav-badge">{recruiters.length}</span>}
+          {!isRecruiter && recruiters.length > 0 && <span className="nav-badge">{recruiters.length}</span>}
         </NavLink>
         <NavLink to="/attendance" className={({ isActive }) => `nav-item${isActive?' active':''}`}>
           <CalendarCheck /> Attendance
@@ -137,7 +134,7 @@ export default function Sidebar() {
           <>
             <NavLink to="/companies" className={({ isActive }) => `nav-item${isActive?' active':''}`}>
               <Building2 /> Companies
-              <span className="nav-badge">{companies.length}</span>
+              {companies.length > 0 && <span className="nav-badge">{companies.length}</span>}
             </NavLink>
             <NavLink to="/recruitment-partners" className={({ isActive }) => `nav-item${isActive?' active':''}`}>
               <Handshake /> Recruitment Partners
@@ -174,7 +171,7 @@ export default function Sidebar() {
             border:'1px solid rgba(34,197,94,0.2)',
             borderRadius:8, color:'#4ade80',
             cursor:'pointer', fontSize:12, fontWeight:500,
-            transition:'all 0.15s',
+            fontFamily:'var(--font)', transition:'all 0.15s',
           }}
           onMouseEnter={e => e.currentTarget.style.background='rgba(34,197,94,0.12)'}
           onMouseLeave={e => e.currentTarget.style.background='rgba(34,197,94,0.07)'}
@@ -191,7 +188,7 @@ export default function Sidebar() {
             border:'1px solid rgba(79,124,255,0.2)',
             borderRadius:8, color:'var(--accent2)',
             cursor:'pointer', fontSize:12, fontWeight:500,
-            transition:'all 0.15s',
+            fontFamily:'var(--font)', transition:'all 0.15s',
           }}
           onMouseEnter={e => e.currentTarget.style.background='rgba(79,124,255,0.13)'}
           onMouseLeave={e => e.currentTarget.style.background='rgba(79,124,255,0.07)'}
@@ -220,15 +217,15 @@ export default function Sidebar() {
             border:'1px solid rgba(239,68,68,0.15)',
             borderRadius:8, color:'#f87171',
             cursor:'pointer', fontSize:13, fontWeight:500,
-            transition:'all 0.15s',
+            fontFamily:'var(--font)', transition:'all 0.15s',
           }}
           onMouseEnter={e => e.currentTarget.style.background='rgba(239,68,68,0.12)'}
           onMouseLeave={e => e.currentTarget.style.background='rgba(239,68,68,0.06)'}
         >
           <LogOut size={15} /> Logout
         </button>
-        <div style={{ fontSize:11, color:'var(--text3)', marginTop:10, paddingLeft:2 }}>HireTrakkr v3.0</div>
-        <div style={{ fontSize:10, color:'var(--text3)', marginTop:1, paddingLeft:2 }}>Firebase Edition</div>
+        <div style={{ fontSize:11, color:'var(--text3)', marginTop:10, paddingLeft:2 }}>HireTrakkr v1.0</div>
+        <div style={{ fontSize:10, color:'var(--text3)', marginTop:1, paddingLeft:2 }}>HireTrakkr Edition</div>
       </div>
     </aside>
   )

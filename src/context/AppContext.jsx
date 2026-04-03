@@ -7,7 +7,7 @@ import React, {
   useMemo
 } from 'react'
 
-import { hashPassword, verifyPassword, hashSeedUsers } from '../utils/security'
+import { hashPassword, verifyPassword } from '../utils/security'
 import { exportBackup as doExportBackup, readBackupFile } from '../utils/backup'
 import { db, collection, doc, getDocs, setDoc, deleteDoc } from '../utils/firebase'
 
@@ -60,22 +60,23 @@ export const useApp = () => useContext(AppCtx)
 
 // ─── Provider ─────────────────────────────────────────────────────
 export function AppProvider({ children }) {
-  const [companies, setCompanies]   = useState([])
-  const [teams, setTeams]           = useState([])
-  const [users, setUsers]           = useState([])
-  const [jobs, setJobs]             = useState([])
-  const [candidates, setCandidates] = useState([])
-  const [recruiters, setRecruiters] = useState([])
-  const [attendance, setAttendance] = useState([])
-  const [loading, setLoading]       = useState(true)
-  const [currentUser, setCurrentUser] = useState(null)
-  const [isLoggedIn, setIsLoggedIn]   = useState(false)
+  const [companies,            setCompanies]            = useState([])
+  const [teams,                setTeams]                = useState([])
+  const [users,                setUsers]                = useState([])
+  const [jobs,                 setJobs]                 = useState([])
+  const [candidates,           setCandidates]           = useState([])
+  const [recruiters,           setRecruiters]           = useState([])
+  const [attendance,           setAttendance]           = useState([])
+  const [recruitmentPartners,  setRecruitmentPartners]  = useState([])  // ✅ NEW
+  const [loading,              setLoading]              = useState(true)
+  const [currentUser,          setCurrentUser]          = useState(null)
+  const [isLoggedIn,           setIsLoggedIn]           = useState(false)
 
   // ─── Load Data ────────────────────────────────────────────────
   useEffect(() => {
     (async () => {
       try {
-        const [cos, tms, usrs, jbs, cands, recs, atts] = await Promise.all([
+        const [cos, tms, usrs, jbs, cands, recs, atts, partners] = await Promise.all([
           fsGetAll('companies'),
           fsGetAll('teams'),
           fsGetAll('users'),
@@ -83,6 +84,7 @@ export function AppProvider({ children }) {
           fsGetAll('candidates'),
           fsGetAll('recruiters'),
           fsGetAll('attendance'),
+          fsGetAll('recruitmentPartners'),   // ✅ NEW
         ])
 
         setCompanies(cos)
@@ -92,8 +94,8 @@ export function AppProvider({ children }) {
         setCandidates(cands)
         setRecruiters(recs)
         setAttendance(atts)
+        setRecruitmentPartners(partners)    // ✅ NEW
 
-        // Restore session
         if (localStorage.getItem(AUTH_LOGGED_KEY)) {
           const u = JSON.parse(localStorage.getItem(AUTH_CURRENT_KEY))
           if (u) {
@@ -155,6 +157,13 @@ export function AppProvider({ children }) {
     if (isTeamLead) return candidates.filter(c => c.teamId === currentUser?.teamId)
     return candidates.filter(c => c.recruiterId === currentUser?.recruiterId)
   }, [candidates, currentUser, isSuperAdmin, isCompanyAdmin, isTeamLead])
+
+  // ✅ NEW — Recruitment Partners visible by role
+  const visibleRecruitmentPartners = useMemo(() => {
+    if (isSuperAdmin) return recruitmentPartners
+    if (isCompanyAdmin) return recruitmentPartners.filter(p => p.companyId === currentUser?.companyId)
+    return recruitmentPartners.filter(p => p.companyId === currentUser?.companyId)
+  }, [recruitmentPartners, currentUser, isSuperAdmin, isCompanyAdmin])
 
   // ─── Login ────────────────────────────────────────────────────
   const login = useCallback(async (username, password) => {
@@ -303,6 +312,25 @@ export function AppProvider({ children }) {
     setCandidates(c => c.filter(x => x.id !== id))
   }
 
+  // ─── Recruitment Partners CRUD ────────────────────────────────  ✅ NEW
+  const addRecruitmentPartner = async (data) => {
+    const record = { ...data, id: uid() }
+    await fsPut('recruitmentPartners', record)
+    setRecruitmentPartners(p => [...p, record])
+    return record
+  }
+
+  const updateRecruitmentPartner = async (id, data) => {
+    const record = { ...data, id }
+    await fsPut('recruitmentPartners', record)
+    setRecruitmentPartners(p => p.map(x => x.id === id ? record : x))
+  }
+
+  const deleteRecruitmentPartner = async (id) => {
+    await fsDelete('recruitmentPartners', id)
+    setRecruitmentPartners(p => p.filter(x => x.id !== id))
+  }
+
   // ─── Attendance ───────────────────────────────────────────────
   const markAttendance = async (recruiterId, status) => {
     const today = new Date().toISOString().split('T')[0]
@@ -322,28 +350,30 @@ export function AppProvider({ children }) {
 
   // ─── Backup ───────────────────────────────────────────────────
   const exportAllData = () => {
-    doExportBackup({ companies, teams, users, jobs, candidates, recruiters, attendance })
+    doExportBackup({ companies, teams, users, jobs, candidates, recruiters, attendance, recruitmentPartners })
   }
 
   const importBackup = async (file) => {
     const parsed = await readBackupFile(file)
     const d = parsed.data
 
-    await fsPutMany('companies',  d.companies  || [])
-    await fsPutMany('teams',      d.teams      || [])
-    await fsPutMany('users',      d.users      || [])
-    await fsPutMany('jobs',       d.jobs       || [])
-    await fsPutMany('candidates', d.candidates || [])
-    await fsPutMany('recruiters', d.recruiters || [])
-    await fsPutMany('attendance', d.attendance || [])
+    await fsPutMany('companies',           d.companies           || [])
+    await fsPutMany('teams',               d.teams               || [])
+    await fsPutMany('users',               d.users               || [])
+    await fsPutMany('jobs',                d.jobs                || [])
+    await fsPutMany('candidates',          d.candidates          || [])
+    await fsPutMany('recruiters',          d.recruiters          || [])
+    await fsPutMany('attendance',          d.attendance          || [])
+    await fsPutMany('recruitmentPartners', d.recruitmentPartners || [])  // ✅ NEW
 
-    setCompanies(d.companies   || [])
-    setTeams(d.teams           || [])
-    setUsers(d.users           || [])
-    setJobs(d.jobs             || [])
-    setCandidates(d.candidates || [])
-    setRecruiters(d.recruiters || [])
-    setAttendance(d.attendance || [])
+    setCompanies(d.companies             || [])
+    setTeams(d.teams                     || [])
+    setUsers(d.users                     || [])
+    setJobs(d.jobs                       || [])
+    setCandidates(d.candidates           || [])
+    setRecruiters(d.recruiters           || [])
+    setAttendance(d.attendance           || [])
+    setRecruitmentPartners(d.recruitmentPartners || [])  // ✅ NEW
 
     return true
   }
@@ -387,6 +417,7 @@ export function AppProvider({ children }) {
       candidates,
       recruiters,
       attendance,
+      recruitmentPartners,           // ✅ NEW
 
       // visible (role-filtered) data
       visibleCompanies,
@@ -395,6 +426,7 @@ export function AppProvider({ children }) {
       visibleRecruiters,
       visibleJobs,
       visibleCandidates,
+      visibleRecruitmentPartners,    // ✅ NEW
 
       // constants
       STATUSES,
@@ -428,6 +460,11 @@ export function AppProvider({ children }) {
       addCandidate,
       updateCandidate,
       deleteCandidate,
+
+      // recruitment partners         ✅ NEW
+      addRecruitmentPartner,
+      updateRecruitmentPartner,
+      deleteRecruitmentPartner,
 
       // attendance
       markAttendance,

@@ -12,6 +12,12 @@ function PartnerForm({ initial = {}, companies = [], onSave, onClose }) {
   const [d, setD] = useState({ ...EMPTY, ...initial })
   const set = k => e => setD(x => ({ ...x, [k]: e.target.value }))
   const canSave = d.name.trim() && d.email.trim() && d.companyId
+
+  const handleSave = () => {
+    if (!canSave) return
+    onSave({ ...d, tenureDays: Math.min(365, Math.max(1, parseInt(d.tenureDays) || 60)) })
+  }
+
   return (
     <>
       <div className="form-grid">
@@ -48,20 +54,35 @@ function PartnerForm({ initial = {}, companies = [], onSave, onClose }) {
         </div>
         <div className="form-group">
           <label>Default Tenure Days</label>
-          <input className="form-control" type="number" min="1" max="365"
+          <input
+            className="form-control"
+            type="number"
+            min="1"
+            max="365"
             value={d.tenureDays}
-            onChange={e => setD(x => ({ ...x, tenureDays: e.target.value }))} />
-          <span style={{ fontSize: 11, color: 'var(--text3)' }}>Auto-applied to candidates via this partner (1–365 days)</span>
+            onChange={e => setD(x => ({ ...x, tenureDays: e.target.value }))}
+          />
+          <span style={{ fontSize: 11, color: 'var(--text3)' }}>
+            Auto-applied to candidates via this partner (1–365 days)
+          </span>
         </div>
         <div className="form-group span-2">
           <label>Notes</label>
-          <textarea className="form-control" value={d.notes} onChange={set('notes')} placeholder="e.g. Specializes in backend developers…" />
+          <textarea
+            className="form-control"
+            value={d.notes}
+            onChange={set('notes')}
+            placeholder="e.g. Specializes in backend developers…"
+          />
         </div>
       </div>
       <div className="modal-footer" style={{ padding: '16px 0 0' }}>
         <button className="btn btn-ghost" onClick={onClose}>Cancel</button>
-        <button className="btn btn-primary" disabled={!canSave}
-          onClick={() => canSave && onSave({ ...d, tenureDays: Math.min(365, Math.max(1, parseInt(d.tenureDays) || 60)) })}>
+        <button
+          className="btn btn-primary"
+          disabled={!canSave}
+          onClick={handleSave}
+        >
           {initial.id ? 'Update Partner' : 'Add Partner'}
         </button>
       </div>
@@ -71,9 +92,9 @@ function PartnerForm({ initial = {}, companies = [], onSave, onClose }) {
 
 export default function RecruitmentPartners() {
   const {
-    visibleRecruitmentPartners: partners = [],  // ✅ FIX — was undefined, causing crash at line 93
-    visibleCandidates: candidates = [],         // ✅ FIX
-    companies = [],                             // ✅ FIX
+    visibleRecruitmentPartners: partners = [],
+    visibleCandidates: candidates = [],
+    companies = [],
     currentUser,
     isSuperAdmin, isCompanyAdmin,
     addRecruitmentPartner, updateRecruitmentPartner, deleteRecruitmentPartner,
@@ -99,11 +120,22 @@ export default function RecruitmentPartners() {
 
   const { sorted, toggle, SortIcon } = useSortable(filtered, 'name')
   const pag = usePagination(sorted, 10)
+
   const getCompany    = id => companies.find(c => c.id === id)
   const getPlaceCount = id => candidates.filter(c => c.recruitmentPartnerId === id).length
 
+  const handleSave = (data) => {
+    if (modal === 'create') {
+      addRecruitmentPartner(data)
+    } else {
+      updateRecruitmentPartner(modal.id, data)
+    }
+    setModal(null)
+  }
+
   return (
     <div className="content">
+      {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
         <div>
           <div style={{ fontSize: 20, fontWeight: 700, color: 'var(--text)', display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -114,10 +146,13 @@ export default function RecruitmentPartners() {
           </div>
         </div>
         {(isSuperAdmin || isCompanyAdmin) && (
-          <button className="btn btn-primary" onClick={() => setModal('create')}><Plus size={14} /> Add Partner</button>
+          <button className="btn btn-primary" onClick={() => setModal('create')}>
+            <Plus size={14} /> Add Partner
+          </button>
         )}
       </div>
 
+      {/* Stats */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 14, marginBottom: 24 }}>
         {[
           { label: 'Total Partners',    value: partners.length,                                       color: 'var(--accent)' },
@@ -131,15 +166,21 @@ export default function RecruitmentPartners() {
         ))}
       </div>
 
+      {/* Table */}
       <div className="table-container">
         <div className="filter-bar">
           <div className="search-wrap">
             <Search size={14} />
-            <input className="search-input" placeholder="Search by name, email, contact…"
-              value={search} onChange={e => setSearch(e.target.value)} />
+            <input
+              className="search-input"
+              placeholder="Search by name, email, contact…"
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+            />
           </div>
           <span className="table-header-count">{filtered.length} results</span>
         </div>
+
         <div className="table-scroll">
           <table>
             <thead>
@@ -193,25 +234,40 @@ export default function RecruitmentPartners() {
                     </td>
                     <td>
                       {p.website
-                        ? <a href={`https://${p.website}`} target="_blank" rel="noopener noreferrer" className="email-link"><Globe size={13} /> {p.website}</a>
+                        ? <a href={`https://${p.website}`} target="_blank" rel="noopener noreferrer" className="email-link">
+                            <Globe size={13} /> {p.website}
+                          </a>
                         : '—'}
                     </td>
                     <td style={{ textAlign: 'center' }}>
-                      <span style={{ background: 'var(--accent-glow)', color: 'var(--accent2)', border: '1px solid rgba(79,124,255,0.2)', padding: '2px 10px', borderRadius: 20, fontSize: 12, fontWeight: 600 }}>
+                      <span style={{
+                        background: 'var(--accent-glow)', color: 'var(--accent2)',
+                        border: '1px solid rgba(79,124,255,0.2)',
+                        padding: '2px 10px', borderRadius: 20, fontSize: 12, fontWeight: 600
+                      }}>
                         {p.tenureDays || 60}d
                       </span>
                     </td>
                     <td style={{ textAlign: 'center' }}>
-                      <span style={{ background: 'var(--green-bg)', color: 'var(--green)', border: '1px solid rgba(34,197,94,0.2)', padding: '2px 10px', borderRadius: 20, fontSize: 12, fontWeight: 600 }}>
+                      <span style={{
+                        background: 'var(--green-bg)', color: 'var(--green)',
+                        border: '1px solid rgba(34,197,94,0.2)',
+                        padding: '2px 10px', borderRadius: 20, fontSize: 12, fontWeight: 600
+                      }}>
                         {getPlaceCount(p.id)}
                       </span>
                     </td>
                     <td>
                       {(isSuperAdmin || isCompanyAdmin) && (
                         <div style={{ display: 'flex', gap: 6 }}>
-                          <button className="btn-icon" onClick={() => setModal(p)}><Edit3 size={13} /></button>
-                          <button className="btn-icon" onClick={() => setConfirm(p.id)}
-                            style={{ color: 'var(--red)', borderColor: 'rgba(239,68,68,0.2)' }}>
+                          <button className="btn-icon" onClick={() => setModal(p)}>
+                            <Edit3 size={13} />
+                          </button>
+                          <button
+                            className="btn-icon"
+                            onClick={() => setConfirm(p.id)}
+                            style={{ color: 'var(--red)', borderColor: 'rgba(239,68,68,0.2)' }}
+                          >
                             <Trash2 size={13} />
                           </button>
                         </div>
@@ -223,6 +279,7 @@ export default function RecruitmentPartners() {
             </tbody>
           </table>
         </div>
+
         {pag.slice.length === 0 && (
           <div className="empty-state">
             <Handshake />
@@ -230,20 +287,27 @@ export default function RecruitmentPartners() {
             <p>{search ? 'Try adjusting your search' : 'Add your first recruitment partner to get started'}</p>
           </div>
         )}
+
         <Pagination pagination={pag} />
       </div>
 
+      {/* Add / Edit Modal */}
       {(modal === 'create' || (modal && modal.id)) && (
-        <Modal title={modal === 'create' ? 'Add Recruitment Partner' : 'Edit Partner'} onClose={() => setModal(null)} size="modal-lg">
+        <Modal
+          title={modal === 'create' ? 'Add Recruitment Partner' : 'Edit Partner'}
+          onClose={() => setModal(null)}
+          size="modal-lg"
+        >
           <PartnerForm
             initial={modal === 'create' ? {} : modal}
             companies={availableCompanies}
-            onSave={d => { modal === 'create' ? addRecruitmentPartner(d) : updateRecruitmentPartner(modal.id, d); setModal(null) }}
+            onSave={handleSave}
             onClose={() => setModal(null)}
           />
         </Modal>
       )}
 
+      {/* Delete Confirm */}
       {confirm && (
         <Confirm
           message="Delete this recruitment partner? Candidates linked to them will lose the association."
