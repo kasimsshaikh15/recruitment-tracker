@@ -1,13 +1,11 @@
 // ─── HireTrakkr Firebase Configuration ───────────────────────────────────────
-// Replace the firebaseConfig below with your actual Firebase project credentials
-// from https://console.firebase.google.com → Project Settings → Your Apps
-
 import { initializeApp } from 'firebase/app'
 import {
   getFirestore,
   collection,
   doc,
   getDocs,
+  getDoc,
   setDoc,
   deleteDoc,
   writeBatch,
@@ -15,6 +13,7 @@ import {
   where,
   onSnapshot,
 } from 'firebase/firestore'
+import { getAuth } from 'firebase/auth'
 
 // ── FIREBASE CONFIG ───────────────────────────────────────────────────────────
 const firebaseConfig = {
@@ -30,8 +29,9 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig)
 const db = getFirestore(app)
+const auth = getAuth(app)
 
-export { db, collection, doc, getDocs, setDoc, deleteDoc, writeBatch, query, where, onSnapshot }
+export { db, auth, collection, doc, getDocs, getDoc, setDoc, deleteDoc, writeBatch, query, where, onSnapshot }
 
 // ── Firestore Helpers ─────────────────────────────────────────────────────────
 
@@ -50,7 +50,6 @@ export async function fsDelete(storeName, id) {
 
 export async function fsPutMany(storeName, records) {
   if (!records || records.length === 0) return
-  // Firestore batch supports max 500 operations
   const chunks = []
   for (let i = 0; i < records.length; i += 400) {
     chunks.push(records.slice(i, i + 400))

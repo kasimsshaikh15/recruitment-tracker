@@ -15,12 +15,12 @@ const STAGES = [
 
 export default function Pipeline() {
   const {
-    visibleCandidates: candidates = [],              // ✅ FIX
-    visibleJobs: jobs = [],                          // ✅ FIX
-    visibleCompanies: companies = [],                // ✅ FIX
-    visibleRecruitmentPartners: recruitmentPartners = [], // ✅ FIX — crash at line 63
-    setCandidateStatus,
-    calculateTenureDays = () => null, // ✅ FIX: fallback if not exported from context
+    visibleCandidates: candidates = [],
+    visibleJobs: jobs = [],
+    visibleCompanies: companies = [],
+    visibleRecruitmentPartners: recruitmentPartners = [],
+    updateCandidate,
+    calculateTenureDays = () => null,
   } = useApp()
 
   const [search, setSearch] = useState('')
@@ -37,9 +37,9 @@ export default function Pipeline() {
     return !q || c.name.toLowerCase().includes(q)
   }), [candidates, search, filterCompany, filterJob, filterPartner])
 
-  const handleDrop = (status) => {
+  const handleDrop = async (status) => {
     if (dragging && dragging.status !== status) {
-      setCandidateStatus(dragging.id, status)
+      await updateCandidate(dragging.id, { ...dragging, status })
     }
     setDragging(null)
   }

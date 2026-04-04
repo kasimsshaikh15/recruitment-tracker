@@ -9,7 +9,8 @@ import React, {
 
 import { hashPassword, verifyPassword } from '../utils/security'
 import { exportBackup as doExportBackup, readBackupFile } from '../utils/backup'
-import { db, collection, doc, getDocs, setDoc, deleteDoc } from '../utils/firebase'
+import { db, auth, collection, doc, getDocs, getDoc, setDoc, deleteDoc } from '../utils/firebase'
+import { signInWithEmailAndPassword, signOut } from 'firebase/auth'
 
 // ─── Firebase Helpers ─────────────────────────────────────────────
 async function fsGetAll(store) {
@@ -36,13 +37,6 @@ const AUTH_LOGGED_KEY = 'hiretrakkr_loggedIn'
 const AUTH_CURRENT_KEY = 'hiretrakkr_currentUser'
 
 const uid = () => crypto.randomUUID()
-
-const SUPER_ADMIN = {
-  username: 'Superadmin',
-  password: 'Ysjhire@2026',
-  role: 'superAdmin',
-  name: 'Super Admin'
-}
 
 const STATUSES = [
   '📋 Applied',
@@ -158,7 +152,7 @@ export function AppProvider({ children }) {
     return candidates.filter(c => c.recruiterId === currentUser?.recruiterId)
   }, [candidates, currentUser, isSuperAdmin, isCompanyAdmin, isTeamLead])
 
-  // ─── Visible Attendance (filtered by role) ────────────────────  ✅ NEW
+  // ─── Visible Attendance (filtered by role) ────────────────────
   const visibleAttendance = useMemo(() => {
     if (isSuperAdmin) return attendance
 
@@ -184,7 +178,6 @@ export function AppProvider({ children }) {
       )
     }
 
-    // recruiter — only their own records
     return attendance.filter(
       a => a.personId === currentUser?.recruiterId || a.personId === currentUser?.id
     )
@@ -199,17 +192,26 @@ export function AppProvider({ children }) {
 
   // ─── Login ────────────────────────────────────────────────────
   const login = useCallback(async (username, password) => {
-    if (
-      username === SUPER_ADMIN.username &&
-      password === SUPER_ADMIN.password
-    ) {
-      setCurrentUser(SUPER_ADMIN)
-      setIsLoggedIn(true)
-      localStorage.setItem(AUTH_LOGGED_KEY, 'true')
-      localStorage.setItem(AUTH_CURRENT_KEY, JSON.stringify(SUPER_ADMIN))
-      return true
+    try {
+      // Try Firebase Auth first (superadmin)
+      const email = `${username.toLowerCase()}@hiretrakkr.com`
+      const userCred = await signInWithEmailAndPassword(auth, email, password)
+
+      // Fetch role/name from Firestore users collection
+      const snap = await getDoc(doc(db, 'users', userCred.user.uid))
+      if (snap.exists()) {
+        const userData = snap.data()
+        setCurrentUser(userData)
+        setIsLoggedIn(true)
+        localStorage.setItem(AUTH_LOGGED_KEY, 'true')
+        localStorage.setItem(AUTH_CURRENT_KEY, JSON.stringify(userData))
+        return true
+      }
+    } catch {
+      // Not a Firebase Auth user, fall through to Firestore users
     }
 
+    // Existing logic for companyAdmin, teamLead, recruiter
     const found = users.find(u => u.username === username)
     if (!found) return false
 
@@ -224,7 +226,9 @@ export function AppProvider({ children }) {
     return true
   }, [users])
 
-  const logout = () => {
+  // ─── Logout ───────────────────────────────────────────────────
+  const logout = async () => {
+    try { await signOut(auth) } catch {}
     setCurrentUser(null)
     setIsLoggedIn(false)
     localStorage.clear()
@@ -363,7 +367,7 @@ export function AppProvider({ children }) {
     setRecruitmentPartners(p => p.filter(x => x.id !== id))
   }
 
-  // ─── Attendance ───────────────────────────────────────────────  ✅ UPDATED
+  // ─── Attendance ───────────────────────────────────────────────
   const markAttendance = async (personId, status, personType = 'recruiter', date = null) => {
     const dateStr = date || new Date().toISOString().split('T')[0]
     const id = `${personId}_${dateStr}`
@@ -467,7 +471,7 @@ export function AppProvider({ children }) {
       visibleRecruiters,
       visibleJobs,
       visibleCandidates,
-      visibleAttendance,             // ✅ NEW
+      visibleAttendance,
       visibleRecruitmentPartners,
 
       // constants

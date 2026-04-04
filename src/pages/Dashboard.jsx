@@ -27,7 +27,7 @@ function RoleBanner({ currentUser, visibleCompanies = [], teams = [] }) {
       <span style={{ fontSize: 20 }}>{meta.icon}</span>
       <div style={{ flex: 1 }}>
         <div style={{ fontWeight: 600, color: meta.color, fontSize: 13 }}>
-          {currentUser.name || currentUser.username} — {meta.label}
+          {currentUser.username} — {meta.label}
         </div>
         <div style={{ fontSize: 12, color: 'var(--text3)', marginTop: 2 }}>
           {meta.desc}
@@ -45,7 +45,6 @@ function RoleBanner({ currentUser, visibleCompanies = [], teams = [] }) {
   )
 }
 
-// ✅ FIX: Added default empty arrays for both props to prevent .filter() on undefined
 function AttendanceSummary({ visibleAttendance = [], visibleRecruiters = [] }) {
   const today = new Date().toISOString().slice(0, 10)
   const todayAtt = visibleAttendance.filter(a => a.date === today)
@@ -81,14 +80,14 @@ function AttendanceSummary({ visibleAttendance = [], visibleRecruiters = [] }) {
 export default function Dashboard() {
   const {
     currentUser,
-    visibleJobs: jobs = [],               // ✅ FIX: fallback to []
-    visibleCandidates: candidates = [],   // ✅ FIX: fallback to []
-    visibleCompanies: companies = [],     // ✅ FIX: fallback to []
-    visibleRecruiters: recruiters = [],   // ✅ FIX: fallback to []
-    visibleTeams: teams = [],             // ✅ FIX: fallback to []
-    visibleAttendance = [],               // ✅ FIX: fallback to []
+    visibleJobs: jobs = [],
+    visibleCandidates: candidates = [],
+    visibleCompanies: companies = [],
+    visibleRecruiters: recruiters = [],
+    visibleTeams: teams = [],
+    visibleAttendance = [],
     isSuperAdmin, isCompanyAdmin, isTeamLead, isRecruiter,
-    STATUSES = [],                        // ✅ FIX: fallback to []
+    STATUSES = [],
   } = useApp()
 
   const openJobs = jobs.filter(j => j.status === 'Open').length
@@ -183,7 +182,7 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Attendance Summary Card (for monitors) */}
+      {/* Attendance Summary Card */}
       {(isSuperAdmin || isCompanyAdmin || isTeamLead) && (
         <div style={{ marginBottom: 20 }}>
           <AttendanceSummary visibleAttendance={visibleAttendance} visibleRecruiters={recruiters} />
@@ -214,7 +213,6 @@ export default function Dashboard() {
 
       {/* Charts */}
       <div className="chart-grid">
-        {/* Company breakdown - only for superAdmin/companyAdmin */}
         {(isSuperAdmin || isCompanyAdmin) && (
           <div className="chart-card">
             <div className="chart-card-title">Candidates by Company</div>
@@ -230,7 +228,6 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* Team breakdown - superAdmin / companyAdmin */}
         {(isSuperAdmin || isCompanyAdmin) && teamStats.length > 0 && (
           <div className="chart-card">
             <div className="chart-card-title">Candidates by Team</div>
@@ -258,7 +255,6 @@ export default function Dashboard() {
           </ResponsiveContainer>
         </div>
 
-        {/* Recruiter submissions - all roles except pure recruiter */}
         {!isRecruiter && (
           <div className="chart-card">
             <div className="chart-card-title">Submissions per Recruiter</div>

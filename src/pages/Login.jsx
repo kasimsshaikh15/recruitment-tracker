@@ -2,31 +2,24 @@ import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useApp } from '../context/AppContext'
 
-// Super Admin hardcoded credentials (encrypted in production)
-// IMPORTANT: Keep these credentials secure. Do not share with anyone.
-// Username: admin_hiretrakkr_system
-// Password: HireTrakkr@Admin#2026Secure (user enters in plain text, hashed on verification)
-const SUPER_ADMIN_USERNAME = 'admin_hiretrakkr_system'
-const SUPER_ADMIN_PASSWORD = 'HireTrakkr@Admin#2026Secure'
-
 export default function Login() {
   const { login, loading } = useApp()
   const navigate = useNavigate()
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
-  const [error, setError]       = useState('')
+  const [error, setError] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
 
   const handleSubmit = async (e) => {
     e.preventDefault()
     setError('')
     if (loading) { setError('Please wait while system is loading...'); return }
     if (!username.trim()) { setError('Please enter your username'); return }
-    if (!password.trim()) { setError('Please enter your password');  return }
-    
+    if (!password.trim()) { setError('Please enter your password'); return }
+
     setIsSubmitting(true)
     try {
-      // Try to login (works for super admin with hardcoded creds, or other users from database)
       const ok = await login(username.trim(), password)
       if (ok) navigate('/')
       else setError('Incorrect username or password.')
@@ -49,7 +42,6 @@ export default function Login() {
       fontFamily: '"DM Sans", sans-serif', padding: '20px',
     }}>
       <div style={{ width: '100%', maxWidth: '440px' }}>
-        {/* Card */}
         <div style={{ background: 'white', padding: '2rem', borderRadius: '16px', boxShadow: '0 24px 48px rgba(0,0,0,0.15)' }}>
           {/* Logo */}
           <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
@@ -69,18 +61,34 @@ export default function Login() {
                 autoComplete="off"
                 style={inp} placeholder="Enter username"
                 onFocus={e => e.target.style.borderColor = '#667eea'}
-                onBlur={e  => e.target.style.borderColor = '#e1e5e9'}
+                onBlur={e => e.target.style.borderColor = '#e1e5e9'}
               />
             </div>
+
             <div style={{ marginBottom: '1.25rem' }}>
               <label style={{ display: 'block', marginBottom: '0.5rem', color: '#333', fontWeight: 500, fontSize: '0.9rem' }}>Password</label>
-              <input
-                type="password" value={password} onChange={e => setPassword(e.target.value)}
-                autoComplete="off"
-                style={inp} placeholder="Enter password"
-                onFocus={e => e.target.style.borderColor = '#667eea'}
-                onBlur={e  => e.target.style.borderColor = '#e1e5e9'}
-              />
+              <div style={{ position: 'relative' }}>
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  value={password} onChange={e => setPassword(e.target.value)}
+                  autoComplete="off"
+                  style={{ ...inp, paddingRight: '2.75rem' }}
+                  placeholder="Enter password"
+                  onFocus={e => e.target.style.borderColor = '#667eea'}
+                  onBlur={e => e.target.style.borderColor = '#e1e5e9'}
+                />
+                <span
+                  onClick={() => setShowPassword(prev => !prev)}
+                  style={{
+                    position: 'absolute', right: '0.75rem', top: '50%',
+                    transform: `translateY(-50%) rotate(${showPassword ? 180 : 0}deg)`,
+                    transition: 'transform 0.3s ease',
+                    cursor: 'pointer', fontSize: '1.1rem', userSelect: 'none', color: '#888',
+                  }}
+                >
+                  {showPassword ? '🙈' : '👁️'}
+                </span>
+              </div>
             </div>
 
             {loading && (
