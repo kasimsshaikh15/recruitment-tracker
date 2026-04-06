@@ -3,14 +3,20 @@ import { Search } from 'lucide-react'
 import { useApp } from '../context/AppContext'
 import { Avatar, StatusBadge } from '../components/Shared'
 
+// ✅ Updated STAGES
 const STAGES = [
+  { key:'📋 Applied',             label:'Applied',             color:'var(--text3)' },
+  { key:'📞 Screening',           label:'Screening',           color:'var(--cyan)' },
   { key:'📅 Interview Scheduled', label:'Interview Scheduled', color:'var(--purple)' },
-  { key:'➡️ Next Level', label:'Next Level', color:'var(--cyan)' },
-  { key:'✅ Selected', label:'Selected', color:'var(--green)' },
-  { key:'🎉 Joined', label:'Joined', color:'#4ade80' },
-  { key:'⏸️ On Hold', label:'On Hold', color:'var(--yellow)' },
-  { key:'❌ Rejected', label:'Rejected', color:'var(--red)' },
-  { key:'🚫 Exit', label:'Exit', color:'var(--text3)' },
+  { key:'✅ Interview Attended',  label:'Interview Attended',  color:'var(--blue)' },
+  { key:'➡️ Next Level',          label:'Next Level',          color:'var(--cyan)' },
+  { key:'✅ Selected',            label:'Selected',            color:'var(--green)' },
+  { key:'🎉 Joined',              label:'Joined',              color:'#4ade80' },
+  { key:'🚫 Screen Rejected',     label:'Screen Rejected',     color:'var(--red)' },
+  { key:'❌ Interview Rejected',  label:'Interview Rejected',  color:'var(--red)' },
+  { key:'💔 Offer Rejected',      label:'Offer Rejected',      color:'var(--red)' },
+  { key:'⏸️ On Hold',             label:'On Hold',             color:'var(--yellow)' },
+  { key:'🚫 Exit',                label:'Exit',                color:'var(--text3)' },
 ]
 
 export default function Pipeline() {
@@ -20,7 +26,6 @@ export default function Pipeline() {
     visibleCompanies: companies = [],
     visibleRecruitmentPartners: recruitmentPartners = [],
     updateCandidate,
-    calculateTenureDays = () => null,
   } = useApp()
 
   const [search, setSearch] = useState('')
@@ -94,7 +99,6 @@ export default function Pipeline() {
                   const job = jobs.find(j=>j.id===c.jobId)
                   const co = companies.find(x=>x.id===c.companyId)
                   const partner = recruitmentPartners.find(rp=>rp.id===c.recruitmentPartnerId)
-                  const tenureInfo = c.doj ? calculateTenureDays(c.doj, partner) : null
                   return (
                     <div key={c.id} className="pipeline-card"
                       draggable
@@ -118,11 +122,6 @@ export default function Pipeline() {
                       {partner && (
                         <div style={{fontSize:11,color:'var(--accent)',marginTop:4}}>
                           📌 {partner.name}
-                        </div>
-                      )}
-                      {tenureInfo && (
-                        <div style={{fontSize:11,color:tenureInfo.isCompleted ? 'var(--success)' : tenureInfo.remainingDays > 20 ? 'var(--text3)' : 'var(--warning)',marginTop:4}}>
-                          ⏳ {tenureInfo.remainingDays} days left
                         </div>
                       )}
                       <div style={{fontSize:11,color:'var(--text3)',marginTop:4}}>{c.experience}</div>

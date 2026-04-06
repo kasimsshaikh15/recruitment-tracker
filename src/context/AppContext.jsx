@@ -41,11 +41,16 @@ const uid = () => crypto.randomUUID()
 const STATUSES = [
   '📋 Applied',
   '📞 Screening',
-  '🔍 Interview',
+  '📅 Interview Scheduled',
+  '✅ Interview Attended',
+  '➡️ Next Level',
   '✅ Selected',
-  '❌ Rejected',
   '🎉 Joined',
-  '🔄 On Hold',
+  '🚫 Screen Rejected',
+  '❌ Interview Rejected',
+  '💔 Offer Rejected',
+  '⏸️ On Hold',
+  '🚫 Exit',
 ]
 
 // ─── Context ──────────────────────────────────────────────────────
@@ -193,11 +198,8 @@ export function AppProvider({ children }) {
   // ─── Login ────────────────────────────────────────────────────
   const login = useCallback(async (username, password) => {
     try {
-      // Try Firebase Auth first (superadmin)
       const email = `${username.toLowerCase()}@hiretrakkr.com`
       const userCred = await signInWithEmailAndPassword(auth, email, password)
-
-      // Fetch role/name from Firestore users collection
       const snap = await getDoc(doc(db, 'users', userCred.user.uid))
       if (snap.exists()) {
         const userData = snap.data()
@@ -211,7 +213,6 @@ export function AppProvider({ children }) {
       // Not a Firebase Auth user, fall through to Firestore users
     }
 
-    // Existing logic for companyAdmin, teamLead, recruiter
     const found = users.find(u => u.username === username)
     if (!found) return false
 

@@ -3,17 +3,22 @@ import { Plus, Search, Trash2, Edit3, Calendar, ArrowRight, CheckCircle, PartyPo
 import { useApp } from '../context/AppContext'
 import { Modal, StatusBadge, SkillTags, SkillsInput, Avatar, useSortable, usePagination, Pagination, Confirm, AuditInfo } from '../components/Shared'
 
+// ✅ Updated ACTIONS
 const ACTIONS = [
   { label:'Schedule Interview', status:'📅 Interview Scheduled', cls:'btn-warning', icon:<Calendar size={12}/> },
-  { label:'Next Level', status:'➡️ Next Level', cls:'btn-ghost', icon:<ArrowRight size={12}/> },
-  { label:'Select', status:'✅ Selected', cls:'btn-success', icon:<CheckCircle size={12}/> },
-  { label:'Mark Joined', status:'🎉 Joined', cls:'btn-success', icon:<PartyPopper size={12}/> },
-  { label:'Reject', status:'❌ Rejected', cls:'btn-danger', icon:<XCircle size={12}/> },
-  { label:'On Hold', status:'⏸️ On Hold', cls:'btn-warning', icon:<PauseCircle size={12}/> },
-  { label:'Exit', status:'🚫 Exit', cls:'btn-ghost', icon:<LogOut size={12}/> },
+  { label:'Attended',           status:'✅ Interview Attended',  cls:'btn-ghost',   icon:<CheckCircle size={12}/> },
+  { label:'Next Level',         status:'➡️ Next Level',          cls:'btn-ghost',   icon:<ArrowRight size={12}/> },
+  { label:'Select',             status:'✅ Selected',            cls:'btn-success', icon:<CheckCircle size={12}/> },
+  { label:'Mark Joined',        status:'🎉 Joined',              cls:'btn-success', icon:<PartyPopper size={12}/> },
+  { label:'Screen Rejected',    status:'🚫 Screen Rejected',     cls:'btn-danger',  icon:<XCircle size={12}/> },
+  { label:'Interview Rejected', status:'❌ Interview Rejected',  cls:'btn-danger',  icon:<XCircle size={12}/> },
+  { label:'Offer Rejected',     status:'💔 Offer Rejected',      cls:'btn-danger',  icon:<XCircle size={12}/> },
+  { label:'On Hold',            status:'⏸️ On Hold',             cls:'btn-warning', icon:<PauseCircle size={12}/> },
+  { label:'Exit',               status:'🚫 Exit',                cls:'btn-ghost',   icon:<LogOut size={12}/> },
 ]
 
 function CandidateForm({ initial={}, onSave, onClose, companies=[], jobs=[], recruiters=[], recruitmentPartners=[] }) {
+  const { STATUSES } = useApp() // ✅ use STATUSES from context
   const [d, setD] = useState({
     name:'', jobId:'', companyId:'', recruiterId:'', recruitmentPartnerId:'', experience:'', skills:[], location:'', gender:'Male',
     qualification:'', status:'📅 Interview Scheduled', phone:'', email:'', doj:'', notes:'', ...initial
@@ -71,11 +76,14 @@ function CandidateForm({ initial={}, onSave, onClose, companies=[], jobs=[], rec
         <div className="form-group"><label>Location</label><input className="form-control" value={d.location} onChange={set('location')} placeholder="Bangalore"/></div>
         <div className="form-group"><label>Qualification</label><input className="form-control" value={d.qualification} onChange={set('qualification')} placeholder="B.Tech"/></div>
         <div className="form-group"><label>Date of Joining (DOJ)</label><input type="date" className="form-control" value={d.doj} onChange={set('doj')}/></div>
+
+        {/* ✅ Status dropdown now uses STATUSES from context */}
         <div className="form-group"><label>Status</label>
           <select className="form-control" value={d.status} onChange={set('status')}>
-            {['📅 Interview Scheduled','➡️ Next Level','✅ Selected','🎉 Joined','❌ Rejected','🚫 Exit','⏸️ On Hold'].map(s=><option key={s}>{s}</option>)}
+            {STATUSES.map(s=><option key={s}>{s}</option>)}
           </select>
         </div>
+
         <div className="form-group span-2"><label>Skills</label><SkillsInput value={d.skills} onChange={v=>setD(x=>({...x,skills:v}))}/></div>
         <div className="form-group span-2"><label>Notes</label><textarea className="form-control" value={d.notes} onChange={set('notes')} placeholder="Additional notes..."/></div>
       </div>
@@ -89,13 +97,12 @@ function CandidateForm({ initial={}, onSave, onClose, companies=[], jobs=[], rec
   )
 }
 
-function ProfileDrawer({ candidate, onClose, jobs=[], companies=[], recruiters=[], recruitmentPartners=[], calculateTenureDays, setCandidateStatus, onEdit }) {
+function ProfileDrawer({ candidate, onClose, jobs=[], companies=[], recruiters=[], recruitmentPartners=[], calculateTenureDays, onStatusChange, onEdit }) {
   const job = jobs.find(j=>j.id===candidate.jobId)
   const company = companies.find(c=>c.id===candidate.companyId)
   const recruiter = recruiters.find(r=>r.id===candidate.recruiterId)
   const partner = recruitmentPartners.find(rp=>rp.id===candidate.recruitmentPartnerId)
-
-  const tenureInfo = candidate.doj ? calculateTenureDays(candidate.doj, partner) : null
+  const tenureInfo = candidate.doj && calculateTenureDays ? calculateTenureDays(candidate.doj, partner) : null
 
   return (
     <div className="profile-drawer">
@@ -216,7 +223,7 @@ function ProfileDrawer({ candidate, onClose, jobs=[], companies=[], recruiters=[
           {ACTIONS.map(a=>(
             <button key={a.status} className={`btn btn-sm ${a.cls}`}
               style={{opacity:candidate.status===a.status?0.5:1}}
-              onClick={()=>setCandidateStatus(candidate.id, a.status)}>
+              onClick={()=>onStatusChange(candidate.id, a.status)}>
               {a.icon}{a.label}
             </button>
           ))}
@@ -228,12 +235,13 @@ function ProfileDrawer({ candidate, onClose, jobs=[], companies=[], recruiters=[
 
 export default function Candidates() {
   const {
-    visibleCandidates: candidates = [],             // ✅ FIX
-    visibleJobs: jobs = [],                         // ✅ FIX
-    visibleCompanies: companies = [],               // ✅ FIX
-    visibleRecruiters: recruiters = [],             // ✅ FIX
-    visibleRecruitmentPartners: recruitmentPartners = [], // ✅ FIX — was causing crash at line 285
-    addCandidate, updateCandidate, deleteCandidate, setCandidateStatus, calculateTenureDays,
+    visibleCandidates: candidates = [],
+    visibleJobs: jobs = [],
+    visibleCompanies: companies = [],
+    visibleRecruiters: recruiters = [],
+    visibleRecruitmentPartners: recruitmentPartners = [],
+    addCandidate, updateCandidate, deleteCandidate,
+    STATUSES = [], // ✅ from context
   } = useApp()
 
   const [search, setSearch] = useState('')
@@ -257,6 +265,14 @@ export default function Candidates() {
   const { sorted, toggle, SortIcon } = useSortable(filtered, 'name')
   const pag = usePagination(sorted, 20)
 
+  // ✅ Status change handler
+  const handleStatusChange = async (id, status) => {
+    const candidate = candidates.find(c => c.id === id)
+    if (!candidate) return
+    await updateCandidate(id, { ...candidate, status })
+    if (profile?.id === id) setProfile(p => ({ ...p, status }))
+  }
+
   return (
     <div className="content">
       <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:20}}>
@@ -273,10 +289,13 @@ export default function Candidates() {
             <Search size={14}/>
             <input className="search-input" placeholder="Search candidates..." value={search} onChange={e=>setSearch(e.target.value)}/>
           </div>
+
+          {/* ✅ Status filter now uses STATUSES from context */}
           <select className="filter-select" value={filterStatus} onChange={e=>setFilterStatus(e.target.value)}>
             <option value="All">All Status</option>
-            {['📅 Interview Scheduled','➡️ Next Level','✅ Selected','🎉 Joined','❌ Rejected','🚫 Exit','⏸️ On Hold'].map(s=><option key={s}>{s}</option>)}
+            {STATUSES.map(s=><option key={s}>{s}</option>)}
           </select>
+
           <select className="filter-select" value={filterCompany} onChange={e=>setFilterCompany(e.target.value)}>
             <option value="All">All Companies</option>
             {companies.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}
@@ -374,8 +393,8 @@ export default function Candidates() {
             candidate={profile}
             onClose={()=>setProfile(null)}
             jobs={jobs} companies={companies} recruiters={recruiters} recruitmentPartners={recruitmentPartners}
-            calculateTenureDays={calculateTenureDays}
-            setCandidateStatus={(id,s)=>{ setCandidateStatus(id,s); setProfile(c=>({...c,status:s})) }}
+            calculateTenureDays={null}
+            onStatusChange={handleStatusChange}
             onEdit={()=>{ setModal(profile); setProfile(null) }}
           />
         </>
