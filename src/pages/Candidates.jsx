@@ -18,7 +18,7 @@ const ACTIONS = [
 ]
 
 function CandidateForm({ initial={}, onSave, onClose, companies=[], jobs=[], recruiters=[], recruitmentPartners=[] }) {
-  const { STATUSES } = useApp() // ✅ use STATUSES from context
+  const { STATUSES } = useApp()
   const [d, setD] = useState({
     name:'', jobId:'', companyId:'', recruiterId:'', recruitmentPartnerId:'', experience:'', skills:[], location:'', gender:'Male',
     qualification:'', status:'📅 Interview Scheduled', phone:'', email:'', doj:'', notes:'', ...initial
@@ -77,7 +77,6 @@ function CandidateForm({ initial={}, onSave, onClose, companies=[], jobs=[], rec
         <div className="form-group"><label>Qualification</label><input className="form-control" value={d.qualification} onChange={set('qualification')} placeholder="B.Tech"/></div>
         <div className="form-group"><label>Date of Joining (DOJ)</label><input type="date" className="form-control" value={d.doj} onChange={set('doj')}/></div>
 
-        {/* ✅ Status dropdown now uses STATUSES from context */}
         <div className="form-group"><label>Status</label>
           <select className="form-control" value={d.status} onChange={set('status')}>
             {STATUSES.map(s=><option key={s}>{s}</option>)}
@@ -104,6 +103,14 @@ function ProfileDrawer({ candidate, onClose, jobs=[], companies=[], recruiters=[
   const partner = recruitmentPartners.find(rp=>rp.id===candidate.recruitmentPartnerId)
   const tenureInfo = candidate.doj && calculateTenureDays ? calculateTenureDays(candidate.doj, partner) : null
 
+  // ✅ Helper to format date for display in profile drawer
+  const formatDate = (dateStr) => {
+    if (!dateStr) return '—'
+    try {
+      return new Date(dateStr).toLocaleDateString('en-IN', { day:'2-digit', month:'short', year:'numeric' })
+    } catch { return '—' }
+  }
+
   return (
     <div className="profile-drawer">
       <div className="drawer-header">
@@ -125,14 +132,17 @@ function ProfileDrawer({ candidate, onClose, jobs=[], companies=[], recruiters=[
         <div className="divider"/>
         <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12,marginBottom:16}}>
           {[
-            ['Company', company?.name, <MapPin size={12}/>],
-            ['Recruiter', recruiter?.name, <User size={12}/>],
-            ['Partner', partner?.name, null],
-            ['Experience', candidate.experience, null],
-            ['Qualification', candidate.qualification, null],
-            ['Location', candidate.location, <MapPin size={12}/>],
-            ['Gender', candidate.gender, null],
-            ['Applied', candidate.appliedDate, null],
+            ['Company',     company?.name,                        <MapPin size={12}/>],
+            ['Recruiter',   recruiter?.name,                      <User size={12}/>],
+            ['Partner',     partner?.name,                        null],
+            ['Experience',  candidate.experience,                 null],
+            ['Qualification', candidate.qualification,            null],
+            ['Location',    candidate.location,                   <MapPin size={12}/>],
+            ['Gender',      candidate.gender,                     null],
+            // ✅ Applied Date — formatted nicely, shows — for old candidates
+            ['Applied Date', formatDate(candidate.appliedDate),   <Calendar size={12}/>],
+            // ✅ Last Updated — formatted nicely, shows — for old candidates
+            ['Stage Updated', formatDate(candidate.statusUpdatedAt), null],
           ].map(([k,v,icon])=>(
             <div key={k}>
               <div style={{fontSize:11,color:'var(--text3)',marginBottom:2}}>{k}</div>
@@ -241,7 +251,7 @@ export default function Candidates() {
     visibleRecruiters: recruiters = [],
     visibleRecruitmentPartners: recruitmentPartners = [],
     addCandidate, updateCandidate, deleteCandidate,
-    STATUSES = [], // ✅ from context
+    STATUSES = [],
   } = useApp()
 
   const [search, setSearch] = useState('')
@@ -265,12 +275,16 @@ export default function Candidates() {
   const { sorted, toggle, SortIcon } = useSortable(filtered, 'name')
   const pag = usePagination(sorted, 20)
 
-  // ✅ Status change handler
+  // ✅ Status change — now also saves statusUpdatedAt automatically
   const handleStatusChange = async (id, status) => {
     const candidate = candidates.find(c => c.id === id)
     if (!candidate) return
-    await updateCandidate(id, { ...candidate, status })
-    if (profile?.id === id) setProfile(p => ({ ...p, status }))
+    await updateCandidate(id, {
+      ...candidate,
+      status,
+      statusUpdatedAt: new Date().toISOString(), // ✅ auto-tracks when stage changed
+    })
+    if (profile?.id === id) setProfile(p => ({ ...p, status, statusUpdatedAt: new Date().toISOString() }))
   }
 
   return (
@@ -290,7 +304,6 @@ export default function Candidates() {
             <input className="search-input" placeholder="Search candidates..." value={search} onChange={e=>setSearch(e.target.value)}/>
           </div>
 
-          {/* ✅ Status filter now uses STATUSES from context */}
           <select className="filter-select" value={filterStatus} onChange={e=>setFilterStatus(e.target.value)}>
             <option value="All">All Status</option>
             {STATUSES.map(s=><option key={s}>{s}</option>)}
@@ -380,7 +393,16 @@ export default function Candidates() {
           <CandidateForm
             initial={modal==='create' ? {} : modal}
             companies={companies} jobs={jobs} recruiters={recruiters} recruitmentPartners={recruitmentPartners}
-            onSave={d=>{ modal==='create' ? addCandidate(d) : updateCandidate(modal.id,d); setModal(null) }}
+            onSave={d=>{
+              if (modal === 'create') {
+                // ✅ Auto-save appliedDate when creating a new candidate
+                addCandidate({ ...d, appliedDate: new Date().toISOString() })
+              } else {
+                // ✅ Edit — don't overwrite existing appliedDate
+                updateCandidate(modal.id, d)
+              }
+              setModal(null)
+            }}
             onClose={()=>setModal(null)}
           />
         </Modal>

@@ -19,6 +19,20 @@ const STAGES = [
   { key:'🚫 Exit',                label:'Exit',                color:'var(--text3)' },
 ]
 
+// ✅ Helper to format date safely
+const formatDate = (dateStr) => {
+  if (!dateStr) return null
+  try {
+    return new Date(dateStr).toLocaleDateString('en-IN', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+    })
+  } catch {
+    return null
+  }
+}
+
 export default function Pipeline() {
   const {
     visibleCandidates: candidates = [],
@@ -42,9 +56,14 @@ export default function Pipeline() {
     return !q || c.name.toLowerCase().includes(q)
   }), [candidates, search, filterCompany, filterJob, filterPartner])
 
+  // ✅ Updated handleDrop — saves statusUpdatedAt on every stage change
   const handleDrop = async (status) => {
     if (dragging && dragging.status !== status) {
-      await updateCandidate(dragging.id, { ...dragging, status })
+      await updateCandidate(dragging.id, {
+        ...dragging,
+        status,
+        statusUpdatedAt: new Date().toISOString(), // ✅ track when stage changed
+      })
     }
     setDragging(null)
   }
@@ -99,6 +118,10 @@ export default function Pipeline() {
                   const job = jobs.find(j=>j.id===c.jobId)
                   const co = companies.find(x=>x.id===c.companyId)
                   const partner = recruitmentPartners.find(rp=>rp.id===c.recruitmentPartnerId)
+
+                  const appliedDateFormatted = formatDate(c.appliedDate)
+                  const updatedDateFormatted = formatDate(c.statusUpdatedAt)
+
                   return (
                     <div key={c.id} className="pipeline-card"
                       draggable
@@ -106,6 +129,8 @@ export default function Pipeline() {
                       onDragEnd={()=>setDragging(null)}
                       style={{opacity: dragging?.id===c.id ? 0.5 : 1}}
                       title={partner ? `Partner: ${partner.name}` : ''}>
+
+                      {/* Candidate name + job */}
                       <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:8}}>
                         <Avatar name={c.name} size={26}/>
                         <div style={{minWidth:0}}>
@@ -113,18 +138,56 @@ export default function Pipeline() {
                           <div className="pipeline-card-sub">{job?.title||'—'}</div>
                         </div>
                       </div>
+
+                      {/* Company */}
                       {co && (
                         <div style={{display:'flex',alignItems:'center',gap:5,fontSize:11,color:'var(--text3)'}}>
                           <div style={{width:5,height:5,borderRadius:'50%',background:co.color}}/>
                           {co.name}
                         </div>
                       )}
+
+                      {/* Partner */}
                       {partner && (
                         <div style={{fontSize:11,color:'var(--accent)',marginTop:4}}>
                           📌 {partner.name}
                         </div>
                       )}
+
+                      {/* Experience */}
                       <div style={{fontSize:11,color:'var(--text3)',marginTop:4}}>{c.experience}</div>
+
+                      {/* ✅ Date section — only shows if dates exist (safe for old data) */}
+                      {(appliedDateFormatted || updatedDateFormatted) && (
+                        <div style={{
+                          marginTop:8,
+                          paddingTop:8,
+                          borderTop:'1px solid var(--border)',
+                          display:'flex',
+                          flexDirection:'column',
+                          gap:3,
+                        }}>
+                          {appliedDateFormatted && (
+                            <div style={{display:'flex',alignItems:'center',gap:4,fontSize:10,color:'var(--text3)'}}>
+                              <span>📅</span>
+                              <span>Applied:</span>
+                              <span style={{color:'var(--text2)',fontWeight:500}}>
+                                {appliedDateFormatted}
+                              </span>
+                            </div>
+                          )}
+                          {updatedDateFormatted && (
+                            <div style={{display:'flex',alignItems:'center',gap:4,fontSize:10,color:'var(--text3)'}}>
+                              <span>🔄</span>
+                              <span>Updated:</span>
+                              <span style={{color:'var(--text2)',fontWeight:500}}>
+                                {updatedDateFormatted}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
                     </div>
                   )
                 })}
