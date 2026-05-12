@@ -26,14 +26,34 @@ const ROLE_LABELS = {
 function UserForm({ initial = {}, onSave, onClose, companies, teams, recruiters, currentUser, isSuperAdmin, isCompanyAdmin, isTeamLead, addRecruiter }) {
   const creatableRoles = CREATABLE_ROLES[currentUser?.role] || []
 
+  // ─── FIX 1: Determine if this is a create or edit operation ───────────────
+  // Only pre-fill name/username/mobile when EDITING (initial.id exists).
+  // Password is NEVER pre-filled (not even when editing — user must re-enter).
+  // companyId/teamId come from the record being edited, or locked to currentUser
+  // for non-superAdmins. This prevents currentUser credentials from leaking in.
+  const isEditing = Boolean(initial.id)
+
   const [d, setD] = useState({
-    name: '', username: '', password: '',
-    role: creatableRoles[0] || 'recruiter',
-    companyId: isTeamLead || isCompanyAdmin ? (currentUser?.companyId || '') : '',
-    teamId: isTeamLead ? (currentUser?.teamId || '') : '',
-    recruiterId: '', mobile: '',
-    ...initial,
+    name:        isEditing ? (initial.name        || '') : '',
+    username:    isEditing ? (initial.username    || '') : '',   // ← FIX: blank on create
+    password:    '',                                              // ← FIX: NEVER pre-fill
+    role:        isEditing
+                   ? (initial.role || creatableRoles[0] || 'recruiter')
+                   : (creatableRoles[0] || 'recruiter'),
+    companyId:   isEditing
+                   ? (initial.companyId || '')
+                   : (isTeamLead || isCompanyAdmin)
+                     ? (currentUser?.companyId || '')
+                     : '',
+    teamId:      isEditing
+                   ? (initial.teamId || '')
+                   : isTeamLead
+                     ? (currentUser?.teamId || '')
+                     : '',
+    recruiterId: isEditing ? (initial.recruiterId || '') : '',
+    mobile:      isEditing ? (initial.mobile      || '') : '',
   })
+
   const [showPw, setShowPw] = useState(false)
   const [createNewRec, setCreateNewRec] = useState(false)
   const [newRec, setNewRec] = useState({ name: '', email: '', phone: '', specialization: '' })
@@ -77,16 +97,26 @@ function UserForm({ initial = {}, onSave, onClose, companies, teams, recruiters,
           <input className="form-control" value={d.username} onChange={set('username')} placeholder="jane_smith" />
         </div>
         <div className="form-group" style={{ position: 'relative' }}>
-          <label>Password *</label>
+          <label>{isEditing ? 'New Password (leave blank to keep current)' : 'Password *'}</label>
           <div style={{ position: 'relative' }}>
             <input
               className="form-control"
               type={showPw ? 'text' : 'password'}
-              value={d.password} onChange={set('password')}
-              placeholder="••••••••" style={{ paddingRight: 36 }}
+              value={d.password}
+              onChange={set('password')}
+              placeholder={isEditing ? 'Leave blank to keep current' : '••••••••'}
+              style={{ paddingRight: 36 }}
             />
-            <button type="button" onClick={() => setShowPw(s => !s)}
-              style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text3)' }}>
+            <button
+              type="button"
+              onClick={() => setShowPw(s => !s)}
+              style={{
+                position: 'absolute', right: 10, top: '50%',
+                transform: 'translateY(-50%)',
+                background: 'none', border: 'none', cursor: 'pointer',
+                color: 'var(--text3)',
+              }}
+            >
               {showPw ? <EyeOff size={14} /> : <Eye size={14} />}
             </button>
           </div>
@@ -112,7 +142,8 @@ function UserForm({ initial = {}, onSave, onClose, companies, teams, recruiters,
             <input
               className="form-control"
               value={companies.find(c => c.id === currentUser?.companyId)?.name || ''}
-              disabled style={{ opacity: 0.6 }}
+              disabled
+              style={{ opacity: 0.6 }}
             />
           )}
         </div>
@@ -124,7 +155,8 @@ function UserForm({ initial = {}, onSave, onClose, companies, teams, recruiters,
               <input
                 className="form-control"
                 value={teams.find(t => t.id === currentUser?.teamId)?.name || ''}
-                disabled style={{ opacity: 0.6 }}
+                disabled
+                style={{ opacity: 0.6 }}
               />
             ) : (
               <select className="form-control" value={d.teamId} onChange={set('teamId')}>
@@ -141,11 +173,20 @@ function UserForm({ initial = {}, onSave, onClose, companies, teams, recruiters,
               <label>Link to Recruiter Profile *</label>
               <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
                 <div style={{ flex: 1 }}>
-                  <select className="form-control" value={d.recruiterId} onChange={set('recruiterId')} style={{ borderColor: !d.recruiterId && !createNewRec ? '#ef4444' : 'var(--border)' }}>
+                  <select
+                    className="form-control"
+                    value={d.recruiterId}
+                    onChange={set('recruiterId')}
+                    style={{ borderColor: !d.recruiterId && !createNewRec ? '#ef4444' : 'var(--border)' }}
+                  >
                     <option value="">⚠️ Select an existing recruiter profile</option>
                     {filteredRecs.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
                   </select>
-                  {!d.recruiterId && !createNewRec && <div style={{ fontSize: 11, color: '#ef4444', marginTop: 4 }}>⚠️ Required - link to a profile or create one</div>}
+                  {!d.recruiterId && !createNewRec && (
+                    <div style={{ fontSize: 11, color: '#ef4444', marginTop: 4 }}>
+                      ⚠️ Required - link to a profile or create one
+                    </div>
+                  )}
                 </div>
                 <button
                   type="button"
@@ -154,8 +195,9 @@ function UserForm({ initial = {}, onSave, onClose, companies, teams, recruiters,
                     background: createNewRec ? '#22c55e' : 'var(--green-bg)',
                     color: createNewRec ? 'white' : 'var(--green)',
                     border: '1px solid #22c55e', borderRadius: 6,
-                    padding: '6px 12px', cursor: 'pointer', fontSize: 11, fontWeight: 600, marginTop: 2,
-                    whiteSpace: 'nowrap'
+                    padding: '6px 12px', cursor: 'pointer',
+                    fontSize: 11, fontWeight: 600, marginTop: 2,
+                    whiteSpace: 'nowrap',
                   }}
                 >
                   {createNewRec ? '✓ Creating' : '+ Create New'}
@@ -165,30 +207,43 @@ function UserForm({ initial = {}, onSave, onClose, companies, teams, recruiters,
 
             {createNewRec && (
               <div style={{
-                background: 'var(--green-bg)', border: '1px solid #22c55e', borderRadius: 8,
-                padding: '12px', marginBottom: 12, gridColumn: '1 / -1'
+                background: 'var(--green-bg)', border: '1px solid #22c55e',
+                borderRadius: 8, padding: '12px', marginBottom: 12, gridColumn: '1 / -1',
               }}>
                 <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--green)', marginBottom: 10 }}>
                   📝 Create New Recruiter Profile
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-                  <input className="form-control" placeholder="Profile Name *" value={newRec.name} onChange={setNewRec_('name')} style={{ fontSize: 12 }} />
-                  <input className="form-control" placeholder="Email *" value={newRec.email} onChange={setNewRec_('email')} style={{ fontSize: 12 }} />
-                  <input className="form-control" placeholder="Phone *" value={newRec.phone} onChange={setNewRec_('phone')} style={{ fontSize: 12 }} />
-                  <input className="form-control" placeholder="Specialization (e.g., Engineering)" value={newRec.specialization} onChange={setNewRec_('specialization')} style={{ fontSize: 12 }} />
+                  <input className="form-control" placeholder="Profile Name *"  value={newRec.name}           onChange={setNewRec_('name')}           style={{ fontSize: 12 }} />
+                  <input className="form-control" placeholder="Email *"         value={newRec.email}          onChange={setNewRec_('email')}          style={{ fontSize: 12 }} />
+                  <input className="form-control" placeholder="Phone *"         value={newRec.phone}          onChange={setNewRec_('phone')}          style={{ fontSize: 12 }} />
+                  <input className="form-control" placeholder="Specialization"  value={newRec.specialization} onChange={setNewRec_('specialization')} style={{ fontSize: 12 }} />
                 </div>
                 <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
                   <button
                     type="button"
                     onClick={handleCreateAndLinkRecruiter}
-                    style={{ background: '#22c55e', color: 'white', border: 'none', borderRadius: 6, padding: '6px 12px', cursor: 'pointer', fontSize: 11, fontWeight: 600 }}
+                    style={{
+                      background: '#22c55e', color: 'white',
+                      border: 'none', borderRadius: 6,
+                      padding: '6px 12px', cursor: 'pointer',
+                      fontSize: 11, fontWeight: 600,
+                    }}
                   >
                     ✓ Create Profile & Link
                   </button>
                   <button
                     type="button"
-                    onClick={() => { setCreateNewRec(false); setNewRec({ name: '', email: '', phone: '', specialization: '' }) }}
-                    style={{ background: 'var(--red-bg)', color: '#b91c1c', border: 'none', borderRadius: 6, padding: '6px 12px', cursor: 'pointer', fontSize: 11, fontWeight: 600 }}
+                    onClick={() => {
+                      setCreateNewRec(false)
+                      setNewRec({ name: '', email: '', phone: '', specialization: '' })
+                    }}
+                    style={{
+                      background: 'var(--red-bg)', color: '#b91c1c',
+                      border: 'none', borderRadius: 6,
+                      padding: '6px 12px', cursor: 'pointer',
+                      fontSize: 11, fontWeight: 600,
+                    }}
                   >
                     ✗ Cancel
                   </button>
@@ -207,14 +262,19 @@ function UserForm({ initial = {}, onSave, onClose, companies, teams, recruiters,
       <div style={{
         background: `${ROLE_COLORS[d.role] || '#4f7cff'}10`,
         border: `1px solid ${ROLE_COLORS[d.role] || '#4f7cff'}30`,
-        borderRadius: 8, padding: '10px 14px', marginTop: 8, fontSize: 12, color: 'var(--text2)',
+        borderRadius: 8, padding: '10px 14px', marginTop: 8,
+        fontSize: 12, color: 'var(--text2)',
       }}>
         {d.role === 'companyAdmin' && '🏢 This user will manage everything inside the selected company.'}
-        {d.role === 'teamLead' && '👥 This user will manage recruiters and monitor attendance in their team.'}
-        {d.role === 'recruiter' && (
+        {d.role === 'teamLead'     && '👥 This user will manage recruiters and monitor attendance in their team.'}
+        {d.role === 'recruiter'    && (
           <>
-            🎯 This user will add candidates and mark their own attendance.<br/>
-            {!d.recruiterId && <span style={{ color: '#ef4444', fontWeight: 600 }}>⚠️ Must link to a Recruiter Profile above for attendance tracking.</span>}
+            🎯 This user will add candidates and mark their own attendance.<br />
+            {!d.recruiterId && (
+              <span style={{ color: '#ef4444', fontWeight: 600 }}>
+                ⚠️ Must link to a Recruiter Profile above for attendance tracking.
+              </span>
+            )}
           </>
         )}
       </div>
@@ -224,7 +284,12 @@ function UserForm({ initial = {}, onSave, onClose, companies, teams, recruiters,
         <button
           className="btn btn-primary"
           onClick={() => {
-            if (!d.name || !d.username || !d.password) return
+            if (!d.name || !d.username) return
+            // On create, password is required. On edit it's optional (blank = keep current).
+            if (!isEditing && !d.password) {
+              alert('⚠️ Password is required when creating a new user.')
+              return
+            }
             if (d.role === 'recruiter' && !d.recruiterId) {
               alert('⚠️ Please link a Recruiter Profile. This is required for the recruiter to mark attendance.')
               return
@@ -232,7 +297,7 @@ function UserForm({ initial = {}, onSave, onClose, companies, teams, recruiters,
             onSave(d)
           }}
         >
-          {initial.id ? 'Update User' : `Create ${ROLE_LABELS[d.role] || 'User'}`}
+          {isEditing ? 'Update User' : `Create ${ROLE_LABELS[d.role] || 'User'}`}
         </button>
       </div>
     </>
@@ -246,10 +311,20 @@ export default function UserManagement() {
     isSuperAdmin, isCompanyAdmin, isTeamLead, currentUser,
   } = useApp()
 
-  const [search, setSearch]   = useState('')
+  const [search, setSearch]     = useState('')
   const [roleFilter, setRoleFilter] = useState('')
-  const [modal, setModal]     = useState(null)
-  const [confirm, setConfirm] = useState(null)
+  // ─── FIX 2: Use a typed sentinel for "create" mode instead of the string
+  // 'create', so there is zero chance of accidentally mixing up with a real
+  // user object that might share truthy fields. ──────────────────────────────
+  const [modal, setModal]       = useState(null)   // null | { __create: true } | <userObject>
+  const [confirm, setConfirm]   = useState(null)
+
+  const openCreate = () => setModal({ __create: true })
+  const openEdit   = user => setModal(user)
+  const closeModal = () => setModal(null)
+
+  const isCreateModal = modal?.__create === true
+  const isEditModal   = modal && !modal.__create && Boolean(modal.id)
 
   const visibleRoleOptions = useMemo(() => {
     const allowed = CREATABLE_ROLES[currentUser?.role] || []
@@ -276,10 +351,13 @@ export default function UserManagement() {
         <div>
           <div style={{ fontSize: 20, fontWeight: 700, color: 'var(--text)' }}>User Management</div>
           <div style={{ fontSize: 12, color: 'var(--text3)', marginTop: 2 }}>
-            {isSuperAdmin ? 'All system users' : isCompanyAdmin ? 'Users in your company' : 'Recruiters in your team'}
+            {isSuperAdmin   ? 'All system users'              :
+             isCompanyAdmin ? 'Users in your company'         :
+                              'Recruiters in your team'}
           </div>
         </div>
-        <button className="btn btn-primary" onClick={() => setModal('create')}>
+        {/* ─── FIX 2 (continued): use openCreate() instead of setModal('create') */}
+        <button className="btn btn-primary" onClick={openCreate}>
           <Plus size={14} /> Add User
         </button>
       </div>
@@ -302,103 +380,147 @@ export default function UserManagement() {
       <div className="filter-bar" style={{ marginBottom: 16 }}>
         <div className="search-wrap">
           <Search size={14} />
-          <input className="search-input" placeholder="Search users..." value={search} onChange={e => setSearch(e.target.value)} />
+          <input
+            className="search-input"
+            placeholder="Search users..."
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+          />
         </div>
         {visibleRoleOptions.length > 1 && (
-          <select className="form-control" style={{ width: 'auto', minWidth: 140 }} value={roleFilter} onChange={e => setRoleFilter(e.target.value)}>
+          <select
+            className="form-control"
+            style={{ width: 'auto', minWidth: 140 }}
+            value={roleFilter}
+            onChange={e => setRoleFilter(e.target.value)}
+          >
             <option value="">All Roles</option>
-            {visibleRoleOptions.map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
+            {visibleRoleOptions.map(r => (
+              <option key={r.value} value={r.value}>{r.label}</option>
+            ))}
           </select>
         )}
         <span className="table-header-count">{filtered.length} users</span>
       </div>
 
       <div className="table-container">
-        <div className="table-scroll"><table>
-          <thead>
-            <tr>
-              <th>User</th>
-              <th>Username</th>
-              <th>Role</th>
-              {(isSuperAdmin || isCompanyAdmin) && <th>Company</th>}
-              {(isSuperAdmin || isCompanyAdmin) && <th>Team</th>}
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.map(u => {
-              const co    = companies.find(c => c.id === u.companyId)
-              const tm    = teams.find(t => t.id === u.teamId)
-              const color = ROLE_COLORS[u.role] || 'var(--text3)'
-              const isSelf = u.id === currentUser?.id
+        <div className="table-scroll">
+          <table>
+            <thead>
+              <tr>
+                <th>User</th>
+                <th>Username</th>
+                <th>Role</th>
+                {(isSuperAdmin || isCompanyAdmin) && <th>Company</th>}
+                {(isSuperAdmin || isCompanyAdmin) && <th>Team</th>}
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.map(u => {
+                const co     = companies.find(c => c.id === u.companyId)
+                const tm     = teams.find(t => t.id === u.teamId)
+                const color  = ROLE_COLORS[u.role] || 'var(--text3)'
+                const isSelf = u.id === currentUser?.id
 
-              return (
-                <tr key={u.id}>
-                  <td>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                      <Avatar name={u.name || u.username} size={32} />
-                      <div>
-                        <div style={{ fontWeight: 500, color: 'var(--text)', fontSize: 13 }}>
-                          {u.name || u.username}
-                          {isSelf && (
-                            <span style={{ marginLeft: 6, fontSize: 10, background: 'var(--accent)', color: 'white', padding: '1px 6px', borderRadius: 10 }}>You</span>
-                          )}
+                return (
+                  <tr key={u.id}>
+                    <td>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <Avatar name={u.name || u.username} size={32} />
+                        <div>
+                          <div style={{ fontWeight: 500, color: 'var(--text)', fontSize: 13 }}>
+                            {u.name || u.username}
+                            {isSelf && (
+                              <span style={{
+                                marginLeft: 6, fontSize: 10,
+                                background: 'var(--accent)', color: 'white',
+                                padding: '1px 6px', borderRadius: 10,
+                              }}>You</span>
+                            )}
+                          </div>
+                          <div style={{ fontSize: 11, color: 'var(--text3)' }}>{u.mobile || '—'}</div>
                         </div>
-                        <div style={{ fontSize: 11, color: 'var(--text3)' }}>{u.mobile || '—'}</div>
                       </div>
-                    </div>
-                  </td>
-                  <td>
-                    <code style={{ fontSize: 12, background: 'var(--surface)', padding: '2px 8px', borderRadius: 4 }}>
-                      {u.username}
-                    </code>
-                  </td>
-                  <td>
-                    <span style={{ fontSize: 12, padding: '3px 10px', borderRadius: 20, background: `${color}18`, color, fontWeight: 600 }}>
-                      {ROLE_LABELS[u.role] || u.role}
-                    </span>
-                  </td>
-                  {(isSuperAdmin || isCompanyAdmin) && <td style={{ fontSize: 13 }}>{co?.name || '—'}</td>}
-                  {(isSuperAdmin || isCompanyAdmin) && <td style={{ fontSize: 13 }}>{tm?.name || '—'}</td>}
-                  <td>
-                    {!isSelf ? (
-                      <div style={{ display: 'flex', gap: 5 }}>
-                        <button className="btn-icon" onClick={() => setModal(u)}><Edit3 size={13} /></button>
-                        <button className="btn-icon" onClick={() => setConfirm(u.id)}><Trash2 size={13} /></button>
-                      </div>
-                    ) : (
-                      <span style={{ fontSize: 12, color: 'var(--text3)' }}>—</span>
-                    )}
-                  </td>
-                </tr>
-              )
-            })}
-          </tbody>
-        </table></div>{/* ✅ FIXED: closes table-scroll */}
+                    </td>
+                    <td>
+                      <code style={{
+                        fontSize: 12, background: 'var(--surface)',
+                        padding: '2px 8px', borderRadius: 4,
+                      }}>
+                        {u.username}
+                      </code>
+                    </td>
+                    <td>
+                      <span style={{
+                        fontSize: 12, padding: '3px 10px', borderRadius: 20,
+                        background: `${color}18`, color, fontWeight: 600,
+                      }}>
+                        {ROLE_LABELS[u.role] || u.role}
+                      </span>
+                    </td>
+                    {(isSuperAdmin || isCompanyAdmin) && <td style={{ fontSize: 13 }}>{co?.name || '—'}</td>}
+                    {(isSuperAdmin || isCompanyAdmin) && <td style={{ fontSize: 13 }}>{tm?.name || '—'}</td>}
+                    <td>
+                      {!isSelf ? (
+                        <div style={{ display: 'flex', gap: 5 }}>
+                          {/* ─── FIX 2 (continued): use openEdit(u) ──────── */}
+                          <button className="btn-icon" onClick={() => openEdit(u)}><Edit3 size={13} /></button>
+                          <button className="btn-icon" onClick={() => setConfirm(u.id)}><Trash2 size={13} /></button>
+                        </div>
+                      ) : (
+                        <span style={{ fontSize: 12, color: 'var(--text3)' }}>—</span>
+                      )}
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        </div>
 
         {filtered.length === 0 && (
           <div className="empty-state">
             <Shield />
             <h3>No users found</h3>
             <p>
-              {isTeamLead ? 'Add recruiters to your team' :
-               isCompanyAdmin ? 'Add team leads and recruiters' :
-               'Add company admins, team leads, and recruiters'}
+              {isTeamLead     ? 'Add recruiters to your team'                  :
+               isCompanyAdmin ? 'Add team leads and recruiters'                :
+                                'Add company admins, team leads, and recruiters'}
             </p>
           </div>
         )}
-      </div>{/* closes table-container */}
+      </div>
 
-      {(modal === 'create' || (modal && modal.id)) && (
-        <Modal title={modal === 'create' ? 'Add User' : 'Edit User'} onClose={() => setModal(null)}>
+      {/* ─── FIX 2 (continued): gate on isCreateModal / isEditModal ─────────── */}
+      {(isCreateModal || isEditModal) && (
+        <Modal
+          title={isCreateModal ? 'Add User' : 'Edit User'}
+          onClose={closeModal}
+        >
           <UserForm
-            initial={modal === 'create' ? {} : modal}
-            companies={companies} teams={teams} recruiters={recruiters}
+            // FIX 3: For create, always pass a clean empty object.
+            // For edit, pass only the user record — never currentUser.
+            initial={isCreateModal ? {} : modal}
+            companies={companies}
+            teams={teams}
+            recruiters={recruiters}
             currentUser={currentUser}
-            isSuperAdmin={isSuperAdmin} isCompanyAdmin={isCompanyAdmin} isTeamLead={isTeamLead}
+            isSuperAdmin={isSuperAdmin}
+            isCompanyAdmin={isCompanyAdmin}
+            isTeamLead={isTeamLead}
             addRecruiter={addRecruiter}
-            onSave={d => { modal === 'create' ? addUser(d) : updateUser(modal.id, d); setModal(null) }}
-            onClose={() => setModal(null)}
+            onSave={d => {
+              if (isCreateModal) {
+                addUser(d)
+              } else {
+                // If password was left blank during edit, don't overwrite it
+                const payload = d.password ? d : { ...d, password: undefined }
+                updateUser(modal.id, payload)
+              }
+              closeModal()
+            }}
+            onClose={closeModal}
           />
         </Modal>
       )}
