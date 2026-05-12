@@ -1,9 +1,10 @@
 import React, { useState, useMemo } from 'react'
-import { Plus, Search, Trash2, Edit3, Calendar, ArrowRight, CheckCircle, PartyPopper, XCircle, PauseCircle, LogOut, User, Phone, Mail, MapPin } from 'lucide-react'
+import { Plus, Search, Trash2, Edit3, Calendar, ArrowRight, CheckCircle, PartyPopper, XCircle, PauseCircle, LogOut, User, Phone, Mail, MapPin, Download } from 'lucide-react'
 import { useApp } from '../context/AppContext'
 import { Modal, StatusBadge, SkillTags, SkillsInput, Avatar, useSortable, usePagination, Pagination, Confirm, AuditInfo } from '../components/Shared'
+import { useDownloadCandidates } from '../utils/useDownloadCandidates'
 
-// ✅ Updated ACTIONS
+// Actions
 const ACTIONS = [
   { label:'Schedule Interview', status:'📅 Interview Scheduled', cls:'btn-warning', icon:<Calendar size={12}/> },
   { label:'Attended',           status:'✅ Interview Attended',  cls:'btn-ghost',   icon:<CheckCircle size={12}/> },
@@ -68,7 +69,7 @@ function CandidateForm({ initial={}, onSave, onClose, companies=[], jobs=[], rec
           </select>
           {selectedPartner && (
             <small style={{color:'var(--text3)',marginTop:4,display:'block'}}>
-              ⏳ Default Tenure: {partnerTenureDays} days
+              Default Tenure: {partnerTenureDays} days
             </small>
           )}
         </div>
@@ -76,13 +77,11 @@ function CandidateForm({ initial={}, onSave, onClose, companies=[], jobs=[], rec
         <div className="form-group"><label>Location</label><input className="form-control" value={d.location} onChange={set('location')} placeholder="Bangalore"/></div>
         <div className="form-group"><label>Qualification</label><input className="form-control" value={d.qualification} onChange={set('qualification')} placeholder="B.Tech"/></div>
         <div className="form-group"><label>Date of Joining (DOJ)</label><input type="date" className="form-control" value={d.doj} onChange={set('doj')}/></div>
-
         <div className="form-group"><label>Status</label>
           <select className="form-control" value={d.status} onChange={set('status')}>
             {STATUSES.map(s=><option key={s}>{s}</option>)}
           </select>
         </div>
-
         <div className="form-group span-2"><label>Skills</label><SkillsInput value={d.skills} onChange={v=>setD(x=>({...x,skills:v}))}/></div>
         <div className="form-group span-2"><label>Notes</label><textarea className="form-control" value={d.notes} onChange={set('notes')} placeholder="Additional notes..."/></div>
       </div>
@@ -103,12 +102,11 @@ function ProfileDrawer({ candidate, onClose, jobs=[], companies=[], recruiters=[
   const partner = recruitmentPartners.find(rp=>rp.id===candidate.recruitmentPartnerId)
   const tenureInfo = candidate.doj && calculateTenureDays ? calculateTenureDays(candidate.doj, partner) : null
 
-  // ✅ Helper to format date for display in profile drawer
   const formatDate = (dateStr) => {
-    if (!dateStr) return '—'
+    if (!dateStr) return '-'
     try {
       return new Date(dateStr).toLocaleDateString('en-IN', { day:'2-digit', month:'short', year:'numeric' })
-    } catch { return '—' }
+    } catch { return '-' }
   }
 
   return (
@@ -118,12 +116,12 @@ function ProfileDrawer({ candidate, onClose, jobs=[], companies=[], recruiters=[
           <Avatar name={candidate.name} size={40}/>
           <div>
             <div style={{fontWeight:600,color:'var(--text)'}}>{candidate.name}</div>
-            <div style={{fontSize:12,color:'var(--text3)'}}>{job?.title || '—'}</div>
+            <div style={{fontSize:12,color:'var(--text3)'}}>{job?.title || '-'}</div>
           </div>
         </div>
         <div style={{display:'flex',gap:8}}>
           <button className="btn-icon" onClick={onEdit}><Edit3 size={14}/></button>
-          <button className="btn-icon" onClick={onClose}><span style={{fontSize:16,lineHeight:1}}>×</span></button>
+          <button className="btn-icon" onClick={onClose}><span style={{fontSize:16,lineHeight:1}}>x</span></button>
         </div>
       </div>
       <div className="drawer-body">
@@ -132,21 +130,19 @@ function ProfileDrawer({ candidate, onClose, jobs=[], companies=[], recruiters=[
         <div className="divider"/>
         <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12,marginBottom:16}}>
           {[
-            ['Company',     company?.name,                        <MapPin size={12}/>],
-            ['Recruiter',   recruiter?.name,                      <User size={12}/>],
-            ['Partner',     partner?.name,                        null],
-            ['Experience',  candidate.experience,                 null],
-            ['Qualification', candidate.qualification,            null],
-            ['Location',    candidate.location,                   <MapPin size={12}/>],
-            ['Gender',      candidate.gender,                     null],
-            // ✅ Applied Date — formatted nicely, shows — for old candidates
-            ['Applied Date', formatDate(candidate.appliedDate),   <Calendar size={12}/>],
-            // ✅ Last Updated — formatted nicely, shows — for old candidates
+            ['Company',       company?.name,                     <MapPin size={12}/>],
+            ['Recruiter',     recruiter?.name,                   <User size={12}/>],
+            ['Partner',       partner?.name,                     null],
+            ['Experience',    candidate.experience,              null],
+            ['Qualification', candidate.qualification,           null],
+            ['Location',      candidate.location,                <MapPin size={12}/>],
+            ['Gender',        candidate.gender,                  null],
+            ['Applied Date',  formatDate(candidate.appliedDate), <Calendar size={12}/>],
             ['Stage Updated', formatDate(candidate.statusUpdatedAt), null],
           ].map(([k,v,icon])=>(
             <div key={k}>
               <div style={{fontSize:11,color:'var(--text3)',marginBottom:2}}>{k}</div>
-              <div style={{fontSize:13,color:'var(--text)',display:'flex',alignItems:'center',gap:4}}>{icon}{v||'—'}</div>
+              <div style={{fontSize:13,color:'var(--text)',display:'flex',alignItems:'center',gap:4}}>{icon}{v||'-'}</div>
             </div>
           ))}
         </div>
@@ -182,7 +178,7 @@ function ProfileDrawer({ candidate, onClose, jobs=[], companies=[], recruiters=[
                 <div>
                   <div style={{fontSize:11,color:'var(--text3)',marginBottom:2}}>Status</div>
                   <div style={{fontSize:13,color:tenureInfo.isCompleted ? 'var(--success)' : 'var(--warning)'}}>
-                    {tenureInfo.isCompleted ? '✓ Completed' : '⏳ In Progress'}
+                    {tenureInfo.isCompleted ? 'Completed' : 'In Progress'}
                   </div>
                 </div>
               </div>
@@ -254,6 +250,9 @@ export default function Candidates() {
     STATUSES = [],
   } = useApp()
 
+  // ── Download hook ─────────────────────────────────────────────────────────
+  const { downloadCandidates, downloading } = useDownloadCandidates()
+
   const [search, setSearch] = useState('')
   const [filterStatus, setFilterStatus] = useState('All')
   const [filterCompany, setFilterCompany] = useState('All')
@@ -275,26 +274,41 @@ export default function Candidates() {
   const { sorted, toggle, SortIcon } = useSortable(filtered, 'name')
   const pag = usePagination(sorted, 20)
 
-  // ✅ Status change — now also saves statusUpdatedAt automatically
   const handleStatusChange = async (id, status) => {
     const candidate = candidates.find(c => c.id === id)
     if (!candidate) return
     await updateCandidate(id, {
       ...candidate,
       status,
-      statusUpdatedAt: new Date().toISOString(), // ✅ auto-tracks when stage changed
+      statusUpdatedAt: new Date().toISOString(),
     })
     if (profile?.id === id) setProfile(p => ({ ...p, status, statusUpdatedAt: new Date().toISOString() }))
   }
 
   return (
     <div className="content">
+      {/* ── Page Header ── */}
       <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:20}}>
         <div>
           <div style={{fontSize:20,fontWeight:700,color:'var(--text)'}}>Candidates</div>
           <div style={{fontSize:12,color:'var(--text3)',marginTop:2}}>{candidates.length} total candidates</div>
         </div>
-        <button className="btn btn-primary" onClick={()=>setModal('create')}><Plus size={14}/> Create Candidate</button>
+        <div style={{display:'flex',gap:8,alignItems:'center'}}>
+          {/* Download Excel button — scoped automatically to logged-in user's role */}
+          <button
+            className="btn btn-ghost"
+            onClick={() => downloadCandidates()}
+            disabled={downloading}
+            style={{display:'flex',alignItems:'center',gap:6}}
+            title="Download Excel file scoped to your role"
+          >
+            <Download size={14}/>
+            {downloading ? 'Downloading...' : 'Download Excel'}
+          </button>
+          <button className="btn btn-primary" onClick={()=>setModal('create')}>
+            <Plus size={14}/> Create Candidate
+          </button>
+        </div>
       </div>
 
       <div className="table-container">
@@ -313,14 +327,17 @@ export default function Candidates() {
             <option value="All">All Companies</option>
             {companies.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}
           </select>
+
           <select className="filter-select" value={filterJob} onChange={e=>setFilterJob(e.target.value)}>
             <option value="All">All Jobs</option>
             {jobs.map(j=><option key={j.id} value={j.id}>{j.title}</option>)}
           </select>
+
           <select className="filter-select" value={filterPartner} onChange={e=>setFilterPartner(e.target.value)}>
             <option value="All">All Partners</option>
             {recruitmentPartners.map(rp=><option key={rp.id} value={rp.id}>{rp.name}</option>)}
           </select>
+
           <span className="table-header-count">{filtered.length} results</span>
         </div>
 
@@ -356,15 +373,15 @@ export default function Candidates() {
                       </div>
                     </div>
                   </td>
-                  <td style={{fontSize:12}}>{job?.title||'—'}</td>
+                  <td style={{fontSize:12}}>{job?.title||'-'}</td>
                   <td>
                     <div style={{display:'flex',alignItems:'center',gap:6}}>
                       {co && <div style={{width:6,height:6,borderRadius:'50%',background:co.color}}/>}
-                      <span style={{fontSize:12}}>{co?.name||'—'}</span>
+                      <span style={{fontSize:12}}>{co?.name||'-'}</span>
                     </div>
                   </td>
-                  <td style={{fontSize:12}}>{rec?.name||'—'}</td>
-                  <td style={{fontSize:12}}>{partner?.name||'—'}</td>
+                  <td style={{fontSize:12}}>{rec?.name||'-'}</td>
+                  <td style={{fontSize:12}}>{partner?.name||'-'}</td>
                   <td style={{fontSize:12}}>{c.experience}</td>
                   <td><SkillTags skills={c.skills?.slice(0,2)}/></td>
                   <td style={{fontSize:12}}>{c.location}</td>
@@ -395,10 +412,8 @@ export default function Candidates() {
             companies={companies} jobs={jobs} recruiters={recruiters} recruitmentPartners={recruitmentPartners}
             onSave={d=>{
               if (modal === 'create') {
-                // ✅ Auto-save appliedDate when creating a new candidate
                 addCandidate({ ...d, appliedDate: new Date().toISOString() })
               } else {
-                // ✅ Edit — don't overwrite existing appliedDate
                 updateCandidate(modal.id, d)
               }
               setModal(null)
