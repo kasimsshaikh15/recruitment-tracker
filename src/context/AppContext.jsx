@@ -150,12 +150,27 @@ export function AppProvider({ children }) {
     return jobs.filter(j => j.companyId === currentUser?.companyId)
   }, [jobs, currentUser, isSuperAdmin, isCompanyAdmin])
 
+  // ─── Visible Candidates (fixed TL logic) ─────────────────────
   const visibleCandidates = useMemo(() => {
     if (isSuperAdmin) return candidates
     if (isCompanyAdmin) return candidates.filter(c => c.companyId === currentUser?.companyId)
-    if (isTeamLead) return candidates.filter(c => c.teamId === currentUser?.teamId)
+
+    if (isTeamLead) {
+      // 👇 Get all recruiter IDs that belong to this TL's team
+      const teamRecruiterIds = recruiters
+        .filter(r => r.teamId === currentUser?.teamId)
+        .map(r => r.id)
+
+      // 👇 Show candidates added by those recruiters OR directly by TL
+      return candidates.filter(c =>
+        teamRecruiterIds.includes(c.recruiterId) ||
+        c.teamId === currentUser?.teamId
+      )
+    }
+
+    // Recruiter sees only their own candidates
     return candidates.filter(c => c.recruiterId === currentUser?.recruiterId)
-  }, [candidates, currentUser, isSuperAdmin, isCompanyAdmin, isTeamLead])
+  }, [candidates, recruiters, currentUser, isSuperAdmin, isCompanyAdmin, isTeamLead])
 
   // ─── Visible Attendance (filtered by role) ────────────────────
   const visibleAttendance = useMemo(() => {

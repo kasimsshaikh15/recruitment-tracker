@@ -4,7 +4,6 @@ import { useApp } from '../context/AppContext'
 import { Modal, StatusBadge, SkillTags, SkillsInput, Avatar, useSortable, usePagination, Pagination, Confirm, AuditInfo } from '../components/Shared'
 import { useDownloadCandidates } from '../utils/useDownloadCandidates'
 
-// Actions
 const ACTIONS = [
   { label:'Schedule Interview', status:'📅 Interview Scheduled', cls:'btn-warning', icon:<Calendar size={12}/> },
   { label:'Attended',           status:'✅ Interview Attended',  cls:'btn-ghost',   icon:<CheckCircle size={12}/> },
@@ -37,7 +36,7 @@ function CandidateForm({ initial={}, onSave, onClose, companies=[], jobs=[], rec
     <>
       <div className="form-grid">
         <div className="form-group"><label>Full Name *</label><input className="form-control" value={d.name} onChange={set('name')} placeholder="John Doe"/></div>
-        <div className="form-group"><label>Email *</label><input className="form-control" value={d.email} onChange={set('email')} placeholder="john@email.com"/></div>
+        <div className="form-group"><label>Email</label><input className="form-control" value={d.email} onChange={set('email')} placeholder="john@email.com"/></div>
         <div className="form-group"><label>Phone</label><input className="form-control" value={d.phone} onChange={set('phone')} placeholder="9876543210"/></div>
         <div className="form-group"><label>Gender</label>
           <select className="form-control" value={d.gender} onChange={set('gender')}>
@@ -87,7 +86,7 @@ function CandidateForm({ initial={}, onSave, onClose, companies=[], jobs=[], rec
       </div>
       <div className="modal-footer" style={{padding:'16px 0 0'}}>
         <button className="btn btn-ghost" onClick={onClose}>Cancel</button>
-        <button className="btn btn-primary" onClick={()=>{ if(!d.name||!d.email) return; onSave(d) }}>
+        <button className="btn btn-primary" onClick={()=>{ if(!d.name) return; onSave(d) }}>
           {initial.id ? 'Update Candidate' : 'Create Candidate'}
         </button>
       </div>
@@ -95,7 +94,7 @@ function CandidateForm({ initial={}, onSave, onClose, companies=[], jobs=[], rec
   )
 }
 
-function ProfileDrawer({ candidate, onClose, jobs=[], companies=[], recruiters=[], recruitmentPartners=[], calculateTenureDays, onStatusChange, onEdit }) {
+function ProfileDrawer({ candidate, onClose, jobs=[], companies=[], recruiters=[], recruitmentPartners=[], calculateTenureDays, onStatusChange, onEdit, isRecruiter=false }) {
   const job = jobs.find(j=>j.id===candidate.jobId)
   const company = companies.find(c=>c.id===candidate.companyId)
   const recruiter = recruiters.find(r=>r.id===candidate.recruiterId)
@@ -108,6 +107,18 @@ function ProfileDrawer({ candidate, onClose, jobs=[], companies=[], recruiters=[
       return new Date(dateStr).toLocaleDateString('en-IN', { day:'2-digit', month:'short', year:'numeric' })
     } catch { return '-' }
   }
+
+  const infoItems = [
+    !isRecruiter && ['Company',       company?.name,                   <MapPin size={12}/>],
+    !isRecruiter && ['Recruiter',     recruiter?.name,                 <User size={12}/>],
+    !isRecruiter && ['Partner',       partner?.name,                   null],
+    ['Experience',    candidate.experience,                            null],
+    ['Qualification', candidate.qualification,                         null],
+    ['Location',      candidate.location,                              <MapPin size={12}/>],
+    ['Gender',        candidate.gender,                                null],
+    ['Applied Date',  formatDate(candidate.appliedDate),               <Calendar size={12}/>],
+    ['Stage Updated', formatDate(candidate.statusUpdatedAt),           null],
+  ].filter(Boolean)
 
   return (
     <div className="profile-drawer">
@@ -129,17 +140,7 @@ function ProfileDrawer({ candidate, onClose, jobs=[], companies=[], recruiters=[
 
         <div className="divider"/>
         <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12,marginBottom:16}}>
-          {[
-            ['Company',       company?.name,                     <MapPin size={12}/>],
-            ['Recruiter',     recruiter?.name,                   <User size={12}/>],
-            ['Partner',       partner?.name,                     null],
-            ['Experience',    candidate.experience,              null],
-            ['Qualification', candidate.qualification,           null],
-            ['Location',      candidate.location,                <MapPin size={12}/>],
-            ['Gender',        candidate.gender,                  null],
-            ['Applied Date',  formatDate(candidate.appliedDate), <Calendar size={12}/>],
-            ['Stage Updated', formatDate(candidate.statusUpdatedAt), null],
-          ].map(([k,v,icon])=>(
+          {infoItems.map(([k,v,icon])=>(
             <div key={k}>
               <div style={{fontSize:11,color:'var(--text3)',marginBottom:2}}>{k}</div>
               <div style={{fontSize:13,color:'var(--text)',display:'flex',alignItems:'center',gap:4}}>{icon}{v||'-'}</div>
@@ -248,9 +249,9 @@ export default function Candidates() {
     visibleRecruitmentPartners: recruitmentPartners = [],
     addCandidate, updateCandidate, deleteCandidate,
     STATUSES = [],
+    isRecruiter,
   } = useApp()
 
-  // ── Download hook ─────────────────────────────────────────────────────────
   const { downloadCandidates, downloading } = useDownloadCandidates()
 
   const [search, setSearch] = useState('')
@@ -287,14 +288,12 @@ export default function Candidates() {
 
   return (
     <div className="content">
-      {/* ── Page Header ── */}
       <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:20}}>
         <div>
           <div style={{fontSize:20,fontWeight:700,color:'var(--text)'}}>Candidates</div>
           <div style={{fontSize:12,color:'var(--text3)',marginTop:2}}>{candidates.length} total candidates</div>
         </div>
         <div style={{display:'flex',gap:8,alignItems:'center'}}>
-          {/* Download Excel button — scoped automatically to logged-in user's role */}
           <button
             className="btn btn-ghost"
             onClick={() => downloadCandidates()}
@@ -323,20 +322,24 @@ export default function Candidates() {
             {STATUSES.map(s=><option key={s}>{s}</option>)}
           </select>
 
-          <select className="filter-select" value={filterCompany} onChange={e=>setFilterCompany(e.target.value)}>
-            <option value="All">All Companies</option>
-            {companies.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}
-          </select>
+          {!isRecruiter && (
+            <select className="filter-select" value={filterCompany} onChange={e=>setFilterCompany(e.target.value)}>
+              <option value="All">All Companies</option>
+              {companies.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}
+            </select>
+          )}
 
           <select className="filter-select" value={filterJob} onChange={e=>setFilterJob(e.target.value)}>
             <option value="All">All Jobs</option>
             {jobs.map(j=><option key={j.id} value={j.id}>{j.title}</option>)}
           </select>
 
-          <select className="filter-select" value={filterPartner} onChange={e=>setFilterPartner(e.target.value)}>
-            <option value="All">All Partners</option>
-            {recruitmentPartners.map(rp=><option key={rp.id} value={rp.id}>{rp.name}</option>)}
-          </select>
+          {!isRecruiter && (
+            <select className="filter-select" value={filterPartner} onChange={e=>setFilterPartner(e.target.value)}>
+              <option value="All">All Partners</option>
+              {recruitmentPartners.map(rp=><option key={rp.id} value={rp.id}>{rp.name}</option>)}
+            </select>
+          )}
 
           <span className="table-header-count">{filtered.length} results</span>
         </div>
@@ -346,9 +349,9 @@ export default function Candidates() {
             <tr>
               <th onClick={()=>toggle('name')}>Candidate <SortIcon col="name"/></th>
               <th>Job</th>
-              <th>Company</th>
-              <th>Recruiter</th>
-              <th>Partner</th>
+              {!isRecruiter && <th>Company</th>}
+              {!isRecruiter && <th>Recruiter</th>}
+              {!isRecruiter && <th>Partner</th>}
               <th onClick={()=>toggle('experience')}>Experience <SortIcon col="experience"/></th>
               <th>Skills</th>
               <th onClick={()=>toggle('location')}>Location <SortIcon col="location"/></th>
@@ -365,7 +368,10 @@ export default function Candidates() {
               return (
                 <tr key={c.id}>
                   <td>
-                    <div style={{display:'flex',alignItems:'center',gap:10,cursor:'pointer'}} onClick={()=>setProfile(c)}>
+                    <div
+                      style={{display:'flex',alignItems:'center',gap:10,cursor:isRecruiter?'default':'pointer'}}
+                      onClick={()=>{ if(!isRecruiter) setProfile(c) }}
+                    >
                       <Avatar name={c.name} size={30}/>
                       <div>
                         <div style={{fontWeight:500,color:'var(--text)'}}>{c.name}</div>
@@ -374,21 +380,25 @@ export default function Candidates() {
                     </div>
                   </td>
                   <td style={{fontSize:12}}>{job?.title||'-'}</td>
-                  <td>
-                    <div style={{display:'flex',alignItems:'center',gap:6}}>
-                      {co && <div style={{width:6,height:6,borderRadius:'50%',background:co.color}}/>}
-                      <span style={{fontSize:12}}>{co?.name||'-'}</span>
-                    </div>
-                  </td>
-                  <td style={{fontSize:12}}>{rec?.name||'-'}</td>
-                  <td style={{fontSize:12}}>{partner?.name||'-'}</td>
+                  {!isRecruiter && (
+                    <td>
+                      <div style={{display:'flex',alignItems:'center',gap:6}}>
+                        {co && <div style={{width:6,height:6,borderRadius:'50%',background:co.color}}/>}
+                        <span style={{fontSize:12}}>{co?.name||'-'}</span>
+                      </div>
+                    </td>
+                  )}
+                  {!isRecruiter && <td style={{fontSize:12}}>{rec?.name||'-'}</td>}
+                  {!isRecruiter && <td style={{fontSize:12}}>{partner?.name||'-'}</td>}
                   <td style={{fontSize:12}}>{c.experience}</td>
                   <td><SkillTags skills={c.skills?.slice(0,2)}/></td>
                   <td style={{fontSize:12}}>{c.location}</td>
                   <td><StatusBadge status={c.status}/></td>
                   <td>
                     <div style={{display:'flex',gap:5}}>
-                      <button className="btn btn-sm btn-ghost" onClick={()=>setProfile(c)}><User size={12}/> Profile</button>
+                      {!isRecruiter && (
+                        <button className="btn btn-sm btn-ghost" onClick={()=>setProfile(c)}><User size={12}/> Profile</button>
+                      )}
                       <button className="btn-icon" onClick={()=>setModal(c)}><Edit3 size={13}/></button>
                       <button className="btn-icon" onClick={()=>setConfirm(c.id)}><Trash2 size={13}/></button>
                     </div>
@@ -423,7 +433,7 @@ export default function Candidates() {
         </Modal>
       )}
 
-      {profile && (
+      {profile && !isRecruiter && (
         <>
           <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.3)',zIndex:199}} onClick={()=>setProfile(null)}/>
           <ProfileDrawer
@@ -433,6 +443,7 @@ export default function Candidates() {
             calculateTenureDays={null}
             onStatusChange={handleStatusChange}
             onEdit={()=>{ setModal(profile); setProfile(null) }}
+            isRecruiter={isRecruiter}
           />
         </>
       )}
